@@ -208,7 +208,7 @@ import {
   type ExplorerPress,
 } from './lib/explorer'
 import { editorFieldKey, formFieldKey } from './view/explorer'
-import { chosenApp, isOpenOk, isWindowsPath, openArgv, openLabel, windowsDefaultArgv, windowsOpenArgv, windowsTrashArgv } from './lib/apps'
+import { chosenApp, fromMsysPath, isOpenOk, isWindowsPath, openArgv, openLabel, windowsDefaultArgv, windowsOpenArgv, windowsTrashArgv } from './lib/apps'
 // --- end explorer ---
 import { spaceFor, type Actions, type PaneData, type Ui } from './view/kit'
 import type { RowPress, RowProps } from './view/row'
@@ -683,6 +683,16 @@ const onWindows = async ($: EngineInterface): Promise<boolean> => {
   } catch {
     return false
   }
+}
+
+/**
+ * Which file manager a path goes to, and the path as that platform spells it:
+ * a Windows one (a drive path, or any path in a Windows session, a Git Bash
+ * `/c/...` one made `C:/...`) opens in Explorer, the rest in the Finder.
+ */
+const platformPath = async ($: EngineInterface, path: string): Promise<{ isWindows: boolean; path: string }> => {
+  const isWindows = isWindowsPath(path) || (await onWindows($))
+  return { isWindows, path: isWindows ? fromMsysPath(path) : path }
 }
 
 const mtimeOf =
@@ -2272,12 +2282,12 @@ const openPathIn = async ($: EngineInterface, root: string, path: string, isReve
     return
   }
   const isFolder = !isReveal && (await $.fs.stat(path).catch(() => undefined))?.kind === 'dir'
-  const isWindows = isWindowsPath(path)
-  const argv = isWindows ? windowsOpenArgv(path, isReveal, isFolder) : openArgv(path, isReveal, isFolder)
+  const { isWindows, path: target } = await platformPath($, path)
+  const argv = isWindows ? windowsOpenArgv(target, isReveal, isFolder) : openArgv(target, isReveal, isFolder)
   let result = await runner($)(argv)
   const chosen = chosenApp(argv)
   if (!isOpenOk(argv, result.exitCode) && chosen !== undefined) {
-    const fallbackArgv = isWindows ? windowsDefaultArgv(path) : ['open', path]
+    const fallbackArgv = isWindows ? windowsDefaultArgv(target) : ['open', target]
     const fallback = await runner($)(fallbackArgv)
     if (isOpenOk(fallbackArgv, fallback.exitCode)) {
       const reason = oneLine(result.stderr.trim() || `exit code ${result.exitCode}`, 120)
@@ -2649,9 +2659,9 @@ const confirmExplorer = async ($: EngineInterface, key: string): Promise<boolean
   return step.isConfirmed
 }
 
-/** Moves an entry to the Finder's Trash: Apple's `trash`, else the Finder itself. */
+/** Moves an entry to the Recycle Bin on Windows, else to the Finder's Trash: Apple's `trash`, else the Finder itself. */
 const trashEntry = async ($: EngineInterface, path: string): Promise<{ isOk: true } | { isOk: false; reason: string }> => {
-  if (isWindowsPath(path)) {
+  if (isWindowsPath(path) || (await onWindows($))) {
     const recycled = await runner($)(windowsTrashArgv(path))
     return recycled.exitCode === 0 ? { isOk: true } : { isOk: false, reason: oneLine(recycled.stderr.trim() || `exit code ${recycled.exitCode}`, 200) }
   }
@@ -2810,15 +2820,16 @@ const refreshExplorerIfShown = async ($: EngineInterface): Promise<void> => {
 }
 // --- end explorer ---
 
-/** Finder with a file the session sent you selected: only a path the Artifacts list holds. */
+/** The file manager (Explorer on Windows, the Finder on a Mac) with a file the session sent you selected: only a path the Artifacts list holds. */
 const revealArtifact = async ($: EngineInterface, id: string): Promise<void> => {
   const past = await viewedOf($) // --- session history --- a past session's sent files too
-  const path = [...(past?.artifacts ?? []), ...(await read($, artifacts))].find(one => one.id === id && one.kind === 'file')?.path
+  const listed = [...(past?.artifacts ?? []), ...(await read($, artifacts))].find(one => one.id === id && one.kind === 'file')?.path
+  const { isWindows, path } = listed === undefined ? { isWindows: false, path: undefined } : await platformPath($, listed)
   if (path === undefined || !(await $.fs.exists(path))) {
     $.ui.toast('That file is no longer there.', { timeoutMs: 4_000 })
     return
   }
-  const revealArgv = isWindowsPath(path) ? windowsOpenArgv(path, true, false) : ['open', '-R', path]
+  const revealArgv = isWindows ? windowsOpenArgv(path, true, false) : ['open', '-R', path]
   const result = await runner($)(revealArgv)
   if (!isOpenOk(revealArgv, result.exitCode)) {
     $.ui.toast(`Could not reveal ${oneLine(baseName(path), 80)}: ${oneLine(result.stderr.trim() || `exit code ${result.exitCode}`, 160)}`, { timeoutMs: 6_000 })
@@ -4657,6 +4668,7 @@ export const register: Register = on => {
       projectPrompts: projectList,
       sessionId,
       memTotal,
+      isWindows: await onWindows($),
       space: spaceFor(e.surface),
       // --- sources by task ---
       tasks: taskList,

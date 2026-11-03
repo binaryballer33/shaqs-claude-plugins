@@ -21,7 +21,7 @@ figures (CPU, memory in use, network) through `GetSystemTimes`, `GlobalMemorySta
 | CPU of commands that end between two samples | not counted (Windows does not total a process's reaped children) |
 | Battery tab | not shown |
 | Ports tab | measured; dev servers are stopped as the process tree below their listener, and a server this plugin started is stopped as a whole |
-| Open, Reveal, Delete | Explorer, `start` / PowerShell, and the Recycle Bin, in place of Finder, `open` and the Trash |
+| Open, Reveal, Delete | Explorer, `start` / PowerShell, and the Recycle Bin, in place of Finder, `open` and the Trash; the buttons read **Reveal in File Explorer** and **Open in File Explorer** (a session in a `C:\…` folder, or a drive path, counts as Windows) |
 | ⌕ Find in conversation | copies the prompt's opening and asks you to press Ctrl+F, Ctrl+V (no keys are pressed for you) |
 
 Paths are kept with forward slashes inside the pane (`C:/Users/me/project`).
@@ -266,7 +266,7 @@ it, or when it's done.
   - **Time spent**: time monitored, how long bytes were moving (and by whom), total tool-call
     time and summed agent working time.
   - **Artifacts**: the pages Claude published (a link each, version, times published) and the
-    files it sent you, with **Reveal in Finder**.
+    files it sent you, with **Reveal in Finder** (**Reveal in File Explorer** on Windows).
 
   The live rates are the header's, above every tab, so Overview doesn't repeat them; the
   charts (internet, power and energy, the battery, CPU, memory, disk) are the Compute tab's.

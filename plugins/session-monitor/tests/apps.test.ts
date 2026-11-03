@@ -3,11 +3,14 @@ import { describe, expect, test } from 'claude-code/testing'
 import {
   appFor,
   chosenApp,
+  fileManagerName,
+  fromMsysPath,
   isOpenOk,
   isWindowsPath,
   openArgv,
   openLabel,
   toWindowsPath,
+  trashName,
   windowsDefaultArgv,
   windowsOpenArgv,
   windowsTrashArgv,
@@ -104,5 +107,20 @@ describe('the same buttons on Windows', () => {
     expect(argv.slice(0, 4)).toEqual(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command'])
     expect(argv[4]).toContain("$p = 'C:\\repo\\it''s here'")
     expect(argv[4]).toContain('SendToRecycleBin')
+  })
+
+  test('the buttons name the platform\'s file manager and trash', () => {
+    expect(fileManagerName(true)).toBe('File Explorer')
+    expect(fileManagerName(false)).toBe('Finder')
+    expect(trashName(true)).toBe('Recycle Bin')
+    expect(trashName(false)).toBe('Trash')
+  })
+
+  test('a Git Bash path becomes the drive path Explorer needs; any other path is left as it is', () => {
+    expect(fromMsysPath('/c/Users/me/a b.pdf')).toBe('C:/Users/me/a b.pdf')
+    expect(fromMsysPath('/d')).toBe('D:/')
+    expect(fromMsysPath('C:/Users/me')).toBe('C:/Users/me')
+    expect(fromMsysPath('/repo/src')).toBe('/repo/src')
+    expect(windowsOpenArgv(fromMsysPath('/c/Users/me/a.pdf'), true, false)).toEqual(['explorer.exe', '/select,C:\\Users\\me\\a.pdf'])
   })
 })

@@ -94,6 +94,18 @@ export const openArgv = (path: string, isReveal: boolean, isFolder: boolean): st
 /** Whether a path (the plugin's folder, the session's) is a Windows one: a drive letter or a UNC prefix. */
 export const isWindowsPath = (path: string): boolean => /^[A-Za-z]:[\\/]/.test(path) || path.startsWith('\\\\')
 
+/** What the platform's file manager is called: Explorer on Windows, the Finder on a Mac. */
+export const fileManagerName = (isWindows: boolean): string => (isWindows ? 'File Explorer' : 'Finder')
+
+/** What the platform calls where deleted files go. */
+export const trashName = (isWindows: boolean): string => (isWindows ? 'Recycle Bin' : 'Trash')
+
+/** A Git Bash path (`/c/Users/me`) as the drive path (`C:/Users/me`) Explorer needs; any other path as it is. */
+export const fromMsysPath = (path: string): string => {
+  const match = /^\/([A-Za-z])(\/.*)?$/.exec(path)
+  return match === null ? path : `${(match[1] ?? '').toUpperCase()}:${match[2] ?? '/'}`
+}
+
 /** A path with the backslashes Windows programs expect. */
 export const toWindowsPath = (path: string): string => path.replace(/\//g, '\\')
 

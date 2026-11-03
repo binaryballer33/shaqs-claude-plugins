@@ -287,6 +287,8 @@ export type PaneData = {
   // --- end session history ---
   /** The Mac's RAM in bytes, for memory's share of it; 0 while not known. */
   memTotal: number
+  /** Whether the session runs on Windows: the file manager buttons then say File Explorer, not Finder. */
+  isWindows: boolean
   space: Space
   // --- sources by task ---
   /** The tasks sources are attributed to; read only by the Sources tab's By task view. */

@@ -12,7 +12,7 @@ import { fmtBytes, fmtClock, keyOf, oneLine } from '../lib/format'
 import { baseName, EMPTY_TREE, entryGlyph, flattenTree, MAX_TREE_ROWS, modeParts, sizeText, sizeTone, type TreePress, type TreeRow } from '../lib/tree'
 import { fitList, listShareOf } from '../lib/fit'
 import { fileIcon } from '../lib/icons'
-import { openLabel } from '../lib/apps'
+import { fileManagerName, openLabel } from '../lib/apps'
 import { diffPanel } from './diff'
 import { cardStack, figure, figureRow, rowLine, sectionCard, seg, titleSeg, type Actions, type PaneData, type Ui } from './kit'
 import type { RowPress, RowSegment } from './row'
@@ -102,12 +102,12 @@ const folderButtons = (view: TreeView, data: PaneData, ui: Ui, act: Actions): Re
     <Box flexDirection="row" flexWrap="wrap" columnGap={data.space.gap - 1} rowGap={data.space.row}>
       <Button key="tree:refresh" label="Refresh" onPress={() => act.refreshTree()} />
       <Button key="tree:collapse" label="Collapse all" onPress={() => act.collapseTree()} />
-      <Button key="tree:finder" label="Open in Finder" onPress={() => act.openInApp(view.root)} />
+      <Button key="tree:finder" label={`Open in ${fileManagerName(data.isWindows)}`} onPress={() => act.openInApp(view.root)} />
     </Box>
   )
 }
 
-/** A shown file: its text in the open file's card, with buttons to open it in its app or in Finder. */
+/** A shown file: its text in the open file's card, with buttons to open it in its app or in the file manager (Finder, or File Explorer on Windows). */
 const filePanel = (row: EntryRow, data: PaneData, ui: Ui, act: Actions): RenderElement | null => {
   const { Button, Text } = ui
   if (data.diff === null) {
@@ -115,7 +115,7 @@ const filePanel = (row: EntryRow, data: PaneData, ui: Ui, act: Actions): RenderE
   }
   return diffPanel(data.diff, data, ui, act, [
     <Button key="tree:open" label={openLabel(row.entry.name)} onPress={() => act.openInApp(row.path)} />,
-    <Button key="tree:reveal" label="Reveal in Finder" onPress={() => act.revealInFinder(row.path)} />,
+    <Button key="tree:reveal" label={`Reveal in ${fileManagerName(data.isWindows)}`} onPress={() => act.revealInFinder(row.path)} />,
     <Text dimColor>{oneLine(row.path, 240)}</Text>,
   ])
 }
@@ -211,7 +211,7 @@ export const folderTab = (data: PaneData, ui: Ui, act: Actions): RenderElement =
   const kept = fitList(lines, line => line.share, line => line.isShown, 1)
   // Closing a folder or hidden group drawn above the cut makes room for the rows past it; with none open, the pane draws no more of the folder.
   const left = rows.length - kept.length
-  const leftNote = kept.some(line => line.isOpen) ? `… ${left} more rows (close a folder to see them)` : `… ${left} more rows not drawn: Open in Finder lists the whole folder`
+  const leftNote = kept.some(line => line.isOpen) ? `… ${left} more rows (close a folder to see them)` : `… ${left} more rows not drawn: Open in ${fileManagerName(data.isWindows)} lists the whole folder`
   return cardStack(ui, data, [
     filesModeBar(data, ui, act),
     sectionCard(ui, data, TREE_CARD_KEY, `📂 ${oneLine(baseName(view.root), 80)}`, oneLine(view.root, 200), [
