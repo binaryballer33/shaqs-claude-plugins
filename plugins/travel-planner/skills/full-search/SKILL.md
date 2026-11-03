@@ -6,7 +6,7 @@ description: >
   Kayak, Skyscanner, Trip.com, Agoda, Hostelworld, Google Flights and Google Hotels for flights (5 per
   tier per time of day), stays by neighborhood, cars, activities, food, SIMs and transfers, with DIRECT
   links, then builds a self-contained HTML dashboard (Budget / Mid / Upper / Luxury / Custom tabs,
-  checkboxes, map) and emails it to the requester. Use it for any trip, vacation, travel budget,
+  checkboxes, nearby-places cards) and emails it to the requester. Use it for any trip, vacation, travel budget,
   flights plus hotel, "how much to go to X", or booking links, even without the word "dashboard".
   Also refreshes an existing trip: "update the prices", "refresh the Pattaya trip", "are these prices
   still right" re-reads current flight, stay and rental car prices (and anything else dated) in the same
@@ -42,8 +42,8 @@ You are producing two things for the user:
    by `scripts/build_dashboard.py`. Tier tabs (Budget, Mid-tier, Upper class, Luxury) plus a
    **Custom** tab that mixes any tier; a summary row (selected total, where the money goes, tier
    comparison) above two-column category cards; vendor tabs inside each category with up to five
-   options each; a checkbox on every line; and a map of each stay, or any address or Google Maps
-   link the user pastes, with everything useful within a 5-mile radius.
+   options each; a checkbox on every line; and nearby-places cards for each stay (or any address or Google Maps
+   link the user pastes) with everything useful within a 5-mile radius. There is no map.
 
 The dashboard is only as good as the research behind it. Most of your time goes into step 2.
 
@@ -289,7 +289,7 @@ Non-negotiables, because they are the whole point of the deliverable:
   (`deeplinks.py --areas "Copacabana,Ipanema,Lapa"` prints each site's search per area). Tag every
   stay with `"neighborhood": "<id>"` and set its `tiers` from the band you searched (tiers.md: hostel
   or private room → budget, 3★ or entire flat → mid, 4★/boutique → upper, 5★/luxury brand →
-  luxury); sort each area's results by price and use the site's star filter to reach the upper and
+  luxury); mostly entire places, see "Stay mix" below (about 70% entire place, 30% private rooms and the best Hostelworld hostels); sort each area's results by price and use the site's star filter to reach the upper and
   luxury bands. Where a site has none in a band (Hostelworld sells no 5★; a quiet area has two
   luxury hotels), list what exists and record it in that neighborhood's `gaps`
   ({"Hostelworld": "hostels only: no upper or luxury"}). The build warns about every
@@ -449,6 +449,26 @@ reports "not connected", retry once, then ask the user to open Chrome with the e
 switching to the built-in pane. Start every helper with the same instruction. Use the pane only for the
 human-check handoff below, or when the user says to.
 
+**Chrome tab groups (user's standing instruction, Nov 1 2026).** Group the tabs of every Claude in Chrome
+search by category, using exactly these group names, one group per category:
+
+| Group name | What is searched in it |
+|---|---|
+| `travel planner flights` | every flight site (Google Flights, Kayak, Skyscanner, Trip.com, Booking.com, Expedia, Agoda) |
+| `travel planner lodging` | every lodging site (Booking.com, Agoda, Airbnb, Hostelworld, Expedia, Trip.com, Google Hotels, Kayak, Skyscanner) |
+| `travel planner transportation` | rental cars, airport transfers, buses, trains, metro / local transit |
+| `travel planner activities` | activities and tours, popular day trips |
+| `travel planner foodie` | restaurants, local food to try (Google Maps, Michelin, Numbeo) |
+| `travel planner other essentials` | insurance and fees, SIM and mobile data, entry rules, weather, FX |
+
+Every helper brief must name its group and say: open your tabs in that group, never touch another group's tabs,
+close your tabs when done. As of Nov 1 2026 the Claude in Chrome tools (`tabs_context_mcp`, `tabs_create_mcp`)
+take no group name and give each session one shared "MCP" tab group, so naming a group is not possible yet.
+Until a tool offers it: (1) open each category's tabs together so they sit side by side; (2) use these group
+names in every helper brief and report; (3) the moment a tab tool exposes a group or title parameter, create and
+name the six groups before the first search and put every tab in its group. Say in the opening line if the
+groups could not be named.
+
 **Fallback when Chrome does not work** (the extension is not connected, a tool call fails twice, or
 a site still shows a robot check / "Security Check — Continue" / a form that never submits there):
 
@@ -513,10 +533,15 @@ with `model: "sonnet"` and `effort: "high"` (Opus / high only if Sonnet is unava
 helpers can start while you merge the previous stage, as long as they work on different sites
 in their own Chrome tabs.
 
-## Step 3 — Build the map layer
+## Step 3 — Build the nearby-places cards (there is no map)
 
-The map shows every stay and, when the user clicks one, lists hospitals, pharmacies, grocery,
-nightlife, nature, hotels, car rental and transit within 5 miles. Three things make that work:
+**No map (user's standing instruction, Nov 2 2026).** Dashboards have no map and no map text: OpenStreetMap's tile servers answer
+403 / slow, so the Leaflet map was removed from the template. What stays: the stay picker, the "paste an address" box, the category
+tabs (Hospitals, Pharmacies, Grocery, Nightlife, Nature, Hotels, Car rental, Stations) and one card per category, each **full width on
+its own row**, plus the airport-to-stay card first in that grid. Do not add a map, map tiles or Leaflet back.
+
+For the selected stay the cards list hospitals, pharmacies, grocery, nightlife, nature, hotels, car rental and transit within 5
+miles. Three things make that work:
 
 1. **Coordinates for every stay** (`lat`/`lng`). Get them with
    `python3 scripts/geocode.py "Hotel name or address, City"` (OpenStreetMap geocoder, no key), or
@@ -534,6 +559,67 @@ nightlife, nature, hotels, car rental and transit within 5 miles. Three things m
    embassy). OpenStreetMap has no ratings, so this is the only way "high-rated" gets onto the map.
    Search the web for "international hospital {city} English-speaking", open the Google Maps page for
    each candidate to read its rating, and record the Google Maps URL as the source.
+
+4. **Airport route (user's standing instruction, Nov 1 2026).** Run
+   `python scripts/airport_routes.py trip.json` once the stays and `trip.arrival_airport` (with lat/lng)
+   exist. It writes the road distance and no-traffic drive time from the airport onto every stay and
+   neighborhood (`airport_km`, `airport_drive_min`, OSRM, cached in `work/`). The page then shows, for the
+   selected stay, a card (first in the grid beside Hospitals, Pharmacies and
+   Grocery) with the road distance, ride-app time and fares, and the public-transport option. The public-transport option is the nearest stop from
+   `trip.airport_bus` (`routes[].stops[]` with lat/lng, first/last times, `every_min`,
+   `ride_to_airport_min` / `ride_from_airport_min`, fare) and `drive[]` (`min_no_traffic` / `min_traffic`
+   per area). Research those timetables in Chrome (tab group "travel planner transportation").
+
+**Lodging type filter (user's standing instruction, Nov 2 2026).** The Lodging card has a Type filter floated right on
+the Tier row: Hostel (a dorm bed), Private room (your own room: hotel, guesthouse, a room in a host's home) and
+Entire place (the whole apartment, villa or house). Every lodging line gets `stay_type`
+(`hostel` | `private` | `entire`) from `pick_custom_stay.py` / `build_dashboard.py` (`stay_type()`), which reads the
+provider, `room_type` (record it for Airbnb and Booking.com) and the name. Airbnb's "entire place" is trusted as is.
+
+**Cheapest way to get there (user's standing instruction, Nov 2 2026).** The Rental Cars & Transportation tab opens
+with a "Cheapest way to get there" card: whole-trip routes from the origin to the stay as a chain of legs (bus,
+minivan, train, flight, ferry, ride app), with the total price and time, the Cheapest and Fastest badges, and a
+"Cheapest that arrives on check-in day" pick. It reads `trip.routes`: `routes[]` (each with `legs[]`: mode, from, to,
+operator, price, duration_min, depart, arrive, wait_after_min, url, verified), `last_mile` (per arrival point and area,
+for routes that end at a bus terminal) and `ferry` (one line, even when the answer is "none that helps"). The page adds
+the last leg to the stay selected under "What's near your stay". Build it in two parts:
+1. Flight combos: `scripts/routes_build.py trip.json` (ground leg to each airport + the cheapest flight, the cheapest
+   with a free checked bag and the quickest nonstop; adapt its `GROUND` table to the origin).
+2. Overland and mixed routes: have a helper research every way by land and sea (direct buses, train + bus chains,
+   ferries, Rome2Rio's suggestions) into `info/routes_overland.json`, in the same leg shape, and the last mile from each
+   terminal to each area.
+
+**Rated map lists (user's standing instruction, Nov 2 2026).** The map's Hospitals, Pharmacies and Grocery columns list
+only places with a Google Maps rating and review count ("★ 4.5/5 · 480 reviews"): all hospitals and 24 h clinics, only
+big reliable pharmacy chains (Phuket: Boots, Watsons) and supermarket chains (3+ island branches, not convenience
+stores), each branch 3.5+ stars with 20+ reviews. Helpers write `info/poi_hospitals.json`, `info/poi_pharmacies.json`,
+`info/poi_grocery.json` (shapes in `references/trip-schema.md`); `scripts/poi_merge.py trip.json` merges them into
+`pois`.
+
+**Rating colors (user's instruction, Nov 2 2026).** Everywhere a rating shows on the dashboard (stays, cars, activities,
+restaurants, map places) the star is gold, the number is bold and the review count is blue. Map place cards show only
+name, hours, distance with walking and driving times, rating and phone (see `references/trip-schema.md`).
+
+**Flight bag filters (user's standing instruction, Nov 2 2026).** The Flights card has two toggle chips,
+"Free carry-on" and "Free checked bag", floated right on the Time of day row (they can be combined). They read
+`flight.bags.carry_on` and `flight.bags.checked` and count a bag as free only when the value is exactly `true`
+(a fee string like "$22" or `false` is not free). So record both fields on every flight line, as `true`,
+`false`, or the fee as text.
+
+**Return to airport and Cheapest / Fastest (user's standing instruction, Nov 1 2026).**
+- **The Return to airport category:** every trip gets a `return` category (label "Return to airport"),
+  with lines from each stay area back to the departure airport, in the Rental Cars & Transportation tab.
+  Cover every way that exists: public bus, shared van, ride apps (Grab/Bolt/Uber), taxi, tuk-tuk,
+  pre-booked private car, and train or metro where the city has them. Say so in `return_info.rail`
+  when it has none.
+- **Line fields:** each line carries `neighborhood` (the area id), `mode` (bus | shared | rideshare |
+  taxi | tuktuk | private) and `duration_min` (door to door, with `duration_note` saying how it was
+  worked out).
+- **Defaults:** each tier ticks a return line, and so does Custom (`pick_custom_stay.py`).
+- **Arrival transfers:** they carry the same `mode`, `neighborhood` id and `duration_min`.
+- **Cheapest / Fastest badges:** on both the Airport transfer and Return to airport cards, the dashboard
+  marks the Cheapest and the Fastest line for the selected stay's area. On a tie in time, a live
+  price beats an estimate, then the lower price wins. Both cards open filtered to that area.
 
 ## Step 4 — Write the trip JSON and build
 
@@ -568,21 +654,111 @@ Save the output in the trip's own folder under `~/travel-planner-trips/` (see "W
 with a descriptive name: `<destination>-<yyyy-mm>-trip-dashboard.html`. Keep `trip.json` next to it so
 the dashboard can be rebuilt after edits.
 
+**Neighborhood photos (user's instruction, Nov 2 2026).** Every tourist-neighborhood tile in the Lodging section shows a photo of
+the place. Run `python scripts/fetch_neighborhood_images.py trip.json` after writing `neighborhoods`: it finds a freely licensed
+Wikimedia Commons photo per neighborhood (Wikipedia article about the place, then a Commons search), stores it as
+`neighborhoods[].image` with credit and license, and prints each match. The article must mention the city or country (so
+Wikipedia's "Kata" martial art is skipped). Check each printed match and fix a wrong one with `--set <id>="Article title"` or
+`--set <id>=File:Name.jpg`, or put the title in `neighborhoods[].wiki` up front.
+
+**Saved ticks belong to one build (bug fixed Nov 2 2026).** The page remembers the user's ticks in their browser. After a redone search the
+line ids change, so old ticks pointed at stays that no longer existed and the Custom total silently lost its stay. The template now
+stores a fingerprint of the build's lines (`DATA_SIG`) with the ticks and ignores saved ticks from any other build. Never remove it.
+
+**Every stay must have air conditioning and wifi (user's standing instruction, Nov 2 2026).** A stay without both is never listed, in any
+tier, area or site: tropical heat and remote work make them a requirement, not a nice-to-have.
+- **How:** switch on each site's amenities filters for both before reading results: Booking.com facilities "Air conditioning" + "Free WiFi";
+  Airbnb amenities "Air conditioning" + "Wifi"; Agoda facilities "Air conditioning" + "WiFi in all areas / free WiFi"; Expedia "Air
+  conditioning" + "Wifi" / "Free wifi"; Trip.com facilities "Air conditioning" + "Wi-Fi"; Google Hotels amenities "Air-conditioned" +
+  "Wi-Fi"; Kayak and Skyscanner "Air conditioning" + "Wifi"; Hostelworld facilities "Air conditioning" + "Free WiFi" (dorm and private rooms).
+- **If a site has no such filter:** open the listing (or read the card's amenity line) and keep the stay only when both are shown. Never assume
+  a hotel has them. Say in `gaps` which site had no filter.
+- **Record it:** every lodging line gets `"amenities": {"air_conditioning": true, "wifi": true}` from the listing. A line where the page does not
+  say, or says one is missing, is dropped, not kept with a note. The build warns about lodging lines without both flags.
+- **Defaults:** the ticked stay of every tier and the Custom stay must have both flags `true`.
+- **Existing dashboards:** this applies to future searches; do not rerun an old trip's search just for it unless the user asks.
+
+**Phone layout (user's instruction, Nov 2 2026).** At 760px wide or less the same self-contained HTML becomes an app: a bottom navigation bar with
+Trip (overview, totals, the essentials sidebar, Master Search List), Fly & stay, Transport, Food, Activities and Essentials (insurance, SIM, onward
+travel, weather, nearby places); a sticky top bar with the screen title and the running total (tap it to go to Trip); one screen at a time;
+cards that grow with the page and show the first 25 lines with a "Show 25 more" button instead of a scroll box; 38-46px tap targets; swipeable
+tier tabs and filter chips; `viewport-fit=cover` and safe-area padding. Desktop is unchanged. Rules when changing the template: test at 390px, keep
+`document.documentElement.scrollWidth` equal to the viewport width on every screen (one wide element makes phones zoom the whole page out), and keep
+all rules under `body.m` (set by `mSync()`). The email tells phone users to open the attached .html in Chrome (Android) or Safari (iPhone, via Save
+to Files): an email app's built-in preview cannot run scripts.
+
+**Your selection order (user's instruction, Nov 2 2026).** The sidebar's "Your selection" list and the copied summary list ticked lines in trip order:
+Flight ticket, Checked bag, Transport to the airport (origin city to the departure airport), SIM & mobile data, Rental car (only if ticked),
+Transport to your stay, Lodging, Activities & tours, Food & daily spend, Daily Transportation Spend Estimate, Return to airport, Insurance & fees,
+then anything else. A transfer counts as "to the airport" when its id or `exclusive_group` contains the origin city (`transfer-pattaya-...`)
+or it has `"leg": "origin"`; every other transfer is "to your stay".
+
+**The Daily Transportation Spend Estimate is required (tiers.md; missing from the first Phuket run, fixed Nov 2 2026).** Every trip has a "Daily Transportation Spend Estimate" card in
+the Transportation tab with `transport` lines (unit `per_day`, so the page multiplies by the trip's days): one ticked line per tier plus
+alternatives, built from the local fares you already read (`ground.local_transit`): budget = a transit day pass (or 3 songthaew / bus rides),
+mid = a day pass + 1 rideshare, upper = 2-3 rideshares, luxury = a private driver for the day (quote a chauffeur service). Give each line a
+direct link to the fare source, the THB basis in `price_note` and `details`, and `verified: false` unless the fare was read on the
+operator's page. The build warns when the trip has none.
+
+**Stay mix: mostly an entire place to yourself (user's standing instruction, Nov 2 2026).** Search for stays so that
+**about 70% are an entire place with no shared occupancy**, and the other **30% are private rooms and the best
+hostels**. This applies to every city and every tier.
+- **Entire place** (the 70%): an apartment, condo, villa, house, townhouse or studio that only you use (kitchen or
+  bathroom not shared with strangers). A hotel room is not an entire place: it is a private room.
+- **The other 30%:** private rooms (hotel rooms, guesthouse rooms, a private room in a host's home) and hostels.
+  Hostels are only **the best ones according to Hostelworld**: sort Hostelworld by rating and take the top-rated
+  hostels in the area (8.5/10 or better with 100+ reviews, award winners first). Do not list weaker hostels from
+  any other site.
+- **How to reach 70%:** open every site's entire-place filter first, then fill the rest with private rooms: Airbnb
+  "Entire home" place type; Booking.com property type Apartments / Villas / Homes; Agoda Apartment / Villa / Homes;
+  Expedia Vacation rentals (entire home); Trip.com Apartments / Villas; Google Hotels Vacation rentals; Kayak and
+  Skyscanner property type Apartments / Villas / Homes. Hostelworld only sells hostels, so it contributes just its
+  best hostels; note that in `gaps`.
+- **Per cell** (area × site × tier, the usual 5): aim for 4 entire places + 1 other; 3 + 2 is the minimum. Where a
+  site has no entire places in a price band (a quiet area, or a tier like luxury with few villas), list what exists
+  and say so in `gaps`. Keep the tier rules of `references/tiers.md`: entire places exist at every price level (a
+  budget studio, a mid-tier flat, an upper-tier serviced residence, a luxury pool villa).
+- **Record `room_type` on every stay** exactly as the site words it ("Entire home", "Apartment", "Deluxe Double Room",
+  "Bed in 8-Bed Dormitory"). The dashboard's Lodging filter and `scripts/build_dashboard.py` use it to count the mix.
+- **Default ticked stay per tier:** prefer an entire place; fall back to a private room only when no entire place with
+  a good rating (4.5/5 or 8.5/10, 20+ reviews) exists in that tier.
+- **Enforce it:** after `import_area_stays.py`, run `python scripts/stay_mix.py trip.json`. It keeps every entire place, drops
+  hostel lines that are not top-rated on Hostelworld, and trims the lowest-rated private rooms per neighborhood until entire
+  places are 70% (round-robin across the four tiers, so every tier keeps choice). Some sites list few entire places (Agoda, Trip.com
+  and Expedia had only 0-2 per tier in Phuket), so searching alone often lands near 55-60%: say so in the closing summary.
+  A site that shows a robot check ("press and hold") is recorded as blocked; never solve it. Ask the user to clear it in their
+  own Chrome and retry, and keep that site's earlier lines meanwhile.
+- **Check:** `build_dashboard.py` warns when fewer than 70% of the stays (overall, and per neighborhood) are entire
+  places, and when a hostel line is not top-rated. Fix the warning by searching again with the entire-place filter,
+  not by relabeling lines.
+
+ The dashboard opens on the **Custom** tab (a
+saved tier from an earlier visit never overrides that). Its stay is always a place you have entirely to yourself
+(a whole apartment, studio, villa or house; never a hostel, dorm, shared flat or a private room in someone's
+home) in a tourist neighborhood with good nightlife. Before every build run
+`python scripts/pick_custom_stay.py trip.json`: it tags each stay `private_place` (entire / hotel / shared), picks
+the cheapest strongly rated whole place in the nightlife areas, marks it `custom_default`, and marks the matching
+airport transfer too. A neighborhood counts as good nightlife only when it carries the exact tag `Nightlife` (or
+`good_nightlife: true`), so tag Patong-style bar districts that way and never tag a quiet area. Helpers should pass
+the site's room type through as `room_type` on every stay ("entire place", "private room", "Deluxe Double Room",
+"Bed in 10-Bed Dormitory Room"): that is what the picker reads. With no whole place in a nightlife area it falls
+back to a private hotel room and says so; tell the user which rule it used.
+
 ## Step 5 — Verify, then deliver
 
 Open the built file and check it before handing it over: the four tier tabs switch, unchecking a line
 changes the total, every link opens the right provider page, the Master Search List (a collapsed
 panel above the category cards) lists a results link for every vendor × category you searched, every
 the page uses 95% of the screen width with the essentials sidebar on the right (above the content and
-swipeable on phones), Flights, Lodging and Local food to try each take a full-width row (every card 500px tall), chip rows (tier, site, dish, map places) stay on one
+swipeable on phones), Flights, Lodging and Local food to try each take a full-width row (every card 500px tall), chip rows (tier, site, dish, nearby places) stay on one
 line and scroll sideways with a "+N ›" button, weather tiles carry an icon (sun, cloud, light/heavy
 rain, storm, snow, fog), each lists every option from
 every site and tier (cheapest first, with the sort menu working; the Morning / Afternoon / Night flight tabs list flights by departure time, and each stop sits on the route line with its airport code, city and layover length) with its rating and review count and
 scrolls inside, the Airport transfer, SIM & mobile data and Local food to try cards are filled, the
-red entry banner shows what US citizens need, the weather card above the map shows the forecast or
-the monthly normal, and the map opens zoomed to about a mile around the tier's ticked stay (main
-road names readable) with only that stay's pin plus its hospitals, pharmacies and groceries ("Show
-all stays" and the place chips add the rest) and directions / ride links from the airport. Use the built-in browser (serve the folder with `python3 -m http.server` through
+red entry banner shows what US citizens need, the weather card shows the forecast or
+the monthly normal, and the "What's near your stay" section (no map) shows the airport-to-stay card, then one full-width
+card each for the stay's hospitals, pharmacies and groceries (rated, with hours, distance, walking and driving time, phone) and
+the other tabs, with directions / ride links from the airport. Use the built-in browser (serve the folder with `python3 -m http.server` through
 `preview_start`; the pane cannot open `file://` paths) or publish it with the `Artifact` tool when
 that tool exists (load the `artifact-design` skill first, as that tool requires). Send the file with
 `SendUserFile` when available so it reaches the user's other devices.

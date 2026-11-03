@@ -144,6 +144,8 @@ def main():
                       "neighborhood": area, "lat": lat, "lng": lng,
                       "address": (x.get("address") or n["name"]).strip() + (f" (approximate pin: {n['name']})" if approx else ""),
                       "price_note": note, "details": det}
+                if x.get("room_type"):
+                    it["room_type"] = str(x["room_type"]).strip()
                 if num(x.get("stars")):
                     it["tags"] = [f"{int(num(x['stars']))}★"]
                 r = num(x.get("rating"))

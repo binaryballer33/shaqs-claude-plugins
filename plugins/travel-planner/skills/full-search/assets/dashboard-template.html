@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>__TRIP_TITLE__ · Trip cost dashboard</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" crossorigin="">
 <style>
 :root {
   color-scheme: light;
@@ -13,7 +12,7 @@
   --accent: #2a78d6; --accent-ink: #ffffff; --accent-soft: #e4effb;
   --good: #0ca30c; --warning: #fab219; --critical: #d03b3b; --good-ink: #0a7a0a; --warning-ink: #8a5a00; --critical-ink: #b42f2f;
   --c-flights: #2a78d6; --c-lodging: #eb6834; --c-car: #1baf7a; --c-activities: #eda100;
-  --c-food: #e87ba4; --c-transport: #008300; --c-insurance: #6250d6; --c-other: #e34948; --c-transfer: #0b8fa6; --c-sim: #9a6b2f;
+  --c-food: #e87ba4; --c-transport: #008300; --c-insurance: #6250d6; --c-other: #e34948; --c-transfer: #0b8fa6; --c-return: #3a6fb0; --star: #d98e00; --revc: #1c7a9e; --c-sim: #9a6b2f;
   --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);
   --radius: 12px;
 }
@@ -24,7 +23,7 @@
     --text: #f0efec; --text-2: #c3c2b7; --muted: #8f8e86;
     --accent: #3987e5; --accent-ink: #ffffff; --accent-soft: #1d2d42; --good-ink: #5fd35f; --warning-ink: #f1c45c; --critical-ink: #f08080;
     --c-flights: #3987e5; --c-lodging: #d95926; --c-car: #199e70; --c-activities: #c98500;
-    --c-food: #d55181; --c-transport: #008300; --c-insurance: #9085e9; --c-other: #e66767; --c-transfer: #2aaec4; --c-sim: #c08a4f;
+    --c-food: #d55181; --c-transport: #008300; --c-insurance: #9085e9; --c-other: #e66767; --c-transfer: #2aaec4; --c-return: #6d9ee0; --star: #ffc53d; --revc: #5fc0e6; --c-sim: #c08a4f;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.35);
   }
 }
@@ -34,7 +33,7 @@
   --text: #f0efec; --text-2: #c3c2b7; --muted: #8f8e86;
   --accent: #3987e5; --accent-ink: #ffffff; --accent-soft: #1d2d42; --good-ink: #5fd35f; --warning-ink: #f1c45c; --critical-ink: #f08080;
   --c-flights: #3987e5; --c-lodging: #d95926; --c-car: #199e70; --c-activities: #c98500;
-  --c-food: #d55181; --c-transport: #008300; --c-insurance: #9085e9; --c-other: #e66767; --c-transfer: #2aaec4; --c-sim: #c08a4f;
+  --c-food: #d55181; --c-transport: #008300; --c-insurance: #9085e9; --c-other: #e66767; --c-transfer: #2aaec4; --c-return: #6d9ee0; --star: #ffc53d; --revc: #5fc0e6; --c-sim: #c08a4f;
   --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.35);
 }
 * { box-sizing: border-box; }
@@ -44,6 +43,9 @@ a { color: var(--accent); }
 button { font: inherit; color: inherit; }
 .wrap { width: 95%; margin: 0 auto; padding: 0; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 22px; align-items: start; }
+/* left gutter: the content column is narrower than the page so there is empty space on the left to put the mouse on and scroll */
+@media (min-width: 1181px) { .layout { padding-left: clamp(0px, 4vw, 94px); } }
+@media print { .layout { padding-left: 0; } }
 .main-col { min-width: 0; }
 .side { position: sticky; top: 16px; margin-top: 28px; max-height: calc(100vh - 32px); overflow-y: auto; display: grid; gap: 12px; padding: 0 2px 10px; scrollbar-width: thin; }
 .side .sc { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 13px 15px; min-width: 0; }
@@ -172,7 +174,7 @@ h1 { font-size: 26px; } h2 { font-size: 17px; } h3 { font-size: 14px; }
 .cats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
 .cat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 0; height: 500px; display: flex; flex-direction: column; overflow: hidden; }
 .cat-card > .cat-head, .cat-card > .filters, .cat-card > .showing { flex: 0 0 auto; }
-.cat-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--border); }
+.cat-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; border-top: 1px solid var(--border); }
 .cat-body > .item:first-child { border-top: 0; }
 .master { margin-bottom: 16px; }
 .cat-card.wide, .cat-card.span2 { grid-column: 1 / -1; }
@@ -251,7 +253,7 @@ h1 { font-size: 26px; } h2 { font-size: 17px; } h3 { font-size: 14px; }
 @media (max-width: 560px) { .food-guide .dish-desc.hero { flex-direction: column; max-height: 260px; } .dish-photo { width: 150px; height: 150px; } }
 .cat-card.food-guide { height: 680px; } /* room for the 150px dish photos above the restaurant list */
 #card-flights { height: 760px; } /* two full flight cards (about 275px each) visible at once */
-.card.weather { max-height: 500px; overflow-y: auto; overscroll-behavior: contain; }
+.card.weather { max-height: 500px; overflow-y: auto; }
 .vhint { position: sticky; bottom: 0; display: flex; justify-content: center; padding: 22px 0 10px; margin-top: -12px; background: linear-gradient(to bottom, transparent, var(--surface) 65%); pointer-events: none; }
 .vhint .vmore { pointer-events: auto; border: 1px solid var(--accent); color: var(--accent); background: var(--surface); border-radius: 999px; padding: 5px 14px; font-size: 13px; font-weight: 650; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
 .card.weather.at-end .vhint, .card.weather.no-scroll .vhint { display: none; }
@@ -301,7 +303,7 @@ h1 { font-size: 26px; } h2 { font-size: 17px; } h3 { font-size: 14px; }
 .nb-fold > summary .chev { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--accent); white-space: nowrap; }
 .nb-fold > summary .chev::after { content: "Show Info About Neighborhoods \25BE"; }
 .nb-fold[open] > summary .chev::after { content: "Hide \25B4"; }
-.nb-fold .nb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; padding: 2px 12px 8px; max-height: 340px; overflow-y: auto; overscroll-behavior: contain; }
+.nb-fold .nb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; padding: 2px 12px 8px; max-height: 340px; overflow-y: auto; }
 .nb-fold .nb-note { padding: 0 16px 10px; font-size: 12px; color: var(--muted); }
 .cat-card.nb-open { height: 900px; }
 .nb-card .cat-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; padding: 12px; align-content: start; }
@@ -425,9 +427,6 @@ select:hover, select:focus-visible { border-color: var(--accent); }
 .loc .msg { font-size: 12.5px; color: var(--text-2); flex-basis: 100%; min-height: 16px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .chips .chip { padding: 4px 11px; font-size: 12.5px; color: var(--text); }
-#map { height: 460px; border-radius: var(--radius); border: 1px solid var(--border); z-index: 0; }
-#map.dark-tiles .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.7); }
-.map-status { font-size: 13px; color: var(--text-2); margin: 8px 0; min-height: 20px; }
 .poi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; margin-top: 12px; }
 .poi-col h3 { display: flex; align-items: center; gap: 8px; padding: 12px 14px 6px; }
 .poi-col ul { list-style: none; margin: 0; padding: 0 14px 10px; }
@@ -437,12 +436,6 @@ select:hover, select:focus-visible { border-color: var(--accent); }
 .poi-col li .dist { color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .poi-col .more { border-top: 0; padding: 6px 14px 10px; width: auto; }
 .tagi { font-size: 10.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--accent); margin-left: 6px; }
-.stay-pin { width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.35); display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 12px; }
-.stay-pin span { transform: rotate(45deg); }
-.star-pin { width: 22px; height: 22px; border-radius: 50%; background: var(--warning); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); display: grid; place-items: center; font-size: 12px; color: #000; }
-.leaflet-popup-content { font: 13px/1.4 inherit; }
-.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--surface); color: var(--text); }
-.leaflet-container { background: var(--surface-2); }
 footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 12.5px; color: var(--muted); display: grid; gap: 6px; }
 
 @media (max-width: 1000px) { .cats { grid-template-columns: 1fr; } .summary-row { grid-template-columns: 1fr; } .tiers { grid-template-columns: repeat(3, 1fr); } }
@@ -450,7 +443,7 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
   .tiers { grid-template-columns: repeat(2, 1fr); }
   .item { grid-template-columns: 24px minmax(0, 1fr); }
   .item .right { grid-column: 2; text-align: left; justify-items: start; }
-  #map { height: 360px; } h1 { font-size: 22px; }
+  h1 { font-size: 22px; }
 }
 @media print { .actions, .map-section, .hint, .filters, .master { display: none !important; } body { background: #fff; } .card, .cat-card { box-shadow: none; } .cats { grid-template-columns: 1fr; } .cat-card { height: auto; overflow: visible; } .cat-body { overflow: visible; } }
   .norate{color:var(--muted);font-style:italic}
@@ -502,6 +495,244 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
   .fcard .right .price { font-size:1.4rem; }
   .fcard .where { font-size:.78rem; opacity:.75; }
   @media (max-width:700px){ .fcard { grid-template-columns:24px minmax(0,1fr); } .fcard .right { grid-column:2; text-align:left; justify-items:start; } .fcard .tl .pt b{font-size:1.15rem;} }
+
+/* ---- group tabs: every card takes the full row, one group visible at a time ---- */
+.gtabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; padding: 6px 0; }
+.gtabs button { font: inherit; font-weight: 650; font-size: 14px; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--border-strong, var(--border)); background: var(--surface); color: var(--text); cursor: pointer; }
+.gtabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.gtabs button .n { font-weight: 500; opacity: .75; margin-left: 6px; font-size: 12px; }
+.cats .cat-card { grid-column: 1 / -1; }
+.cats .cat-card.g-off { display: none; }
+.flash { outline: 3px solid var(--accent); outline-offset: 2px; animation: flashfade 2.3s ease-out; }
+@keyframes flashfade { 0%, 60% { background: color-mix(in srgb, var(--accent) 18%, transparent); } 100% { background: transparent; } }
+details.srcs { margin: 18px 0 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+details.srcs > summary { cursor: pointer; padding: 12px 16px; font-weight: 700; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+details.srcs > summary::-webkit-details-marker { display: none; }
+details.srcs > summary::after { content: '\2304'; transition: transform .15s; }
+details.srcs[open] > summary::after { transform: rotate(180deg); }
+details.srcs > .srcbody { padding: 0 16px 14px; display: grid; gap: 10px; }
+.side .seli { cursor: pointer; border-radius: 6px; }
+.side .seli:hover, .side .seli:focus-visible { background: color-mix(in srgb, var(--accent) 10%, transparent); outline: none; }
+.side .seli .sn { color: var(--accent); overflow-wrap: anywhere; line-height: 1.35; }
+.side .seli:hover .sn { text-decoration: underline; }
+.side .seli .via a { color: var(--accent); text-decoration: none; margin-left: 6px; }
+.chiprow .filters .lbl2.apt { margin-left: auto !important; }
+
+/* ---- sub-cards: fixed height, vertical scroll, text across the full card width ----
+   Row 1-2: [icon/checkbox] [title + tags] [price, badge, open link]; the description and alternatives start
+   below all of those and run the full width of the card. */
+:root { --sub-item-h: 190px; --sub-flight-h: 236px; --sub-trip-h: 270px; --sub-nb-h: 270px; --sub-poi-h: 340px; }
+.cat-body > .item { max-height: var(--sub-item-h); overflow: hidden; align-content: start; }
+.cat-body > .fcard { height: var(--sub-flight-h); overflow: hidden; align-content: start; }
+.cat-body > .dtrip { max-height: var(--sub-trip-h); overflow: hidden; align-content: start; }
+.nb { max-height: var(--sub-nb-h); overflow: hidden; }
+.poi-col { max-height: var(--sub-poi-h); overflow: hidden; }
+.item > :first-child { grid-column: 1; grid-row: 1 / span 2; }
+.item > div:nth-child(2) { display: contents; }
+.item > div:nth-child(2) > .name { grid-column: 2; grid-row: 1; min-width: 0; align-self: end; }
+.item > div:nth-child(2) > .meta { grid-column: 2; grid-row: 2; min-width: 0; }
+.item > div:nth-child(2) > :not(.name):not(.meta) { grid-column: 1 / -1; min-width: 0; }
+.item > .right { grid-column: 3; grid-row: 1 / span 2; }
+.cat-card > .gnote { max-height: 92px; overflow-y: auto; }
+@media (max-width: 560px) {
+  .item > :first-child { grid-row: 1; }
+  .item > div:nth-child(2) > .name, .item > div:nth-child(2) > .meta { grid-column: 2; grid-row: auto; }
+  .item > .right { grid-column: 2; grid-row: auto; }
+  .item > div:nth-child(2) > :not(.name):not(.meta) { grid-column: 1 / -1; }
+}
+@media print { .cat-body > .item, .cat-body > .fcard, .cat-body > .dtrip, .nb, .poi-col { height: auto; max-height: none; overflow: visible; } }
+details.gdet > summary { cursor: pointer; font-weight: 700; color: var(--text); list-style: none; display: flex; justify-content: space-between; align-items: center; }
+details.gdet > summary::-webkit-details-marker { display: none; }
+details.gdet > summary::after { content: '\2304'; transition: transform .15s; }
+details.gdet[open] > summary::after { transform: rotate(180deg); }
+details.gdet[open] { max-height: 190px; overflow-y: auto; }
+.cat-card.wide .cat-body { grid-template-columns: repeat(auto-fill, minmax(min(100%, 640px), 1fr)); }
+.scrollable, .cat-body { scrollbar-width: thin; scrollbar-color: var(--accent) var(--surface-2); }
+.scrollable::-webkit-scrollbar, .cat-body::-webkit-scrollbar { width: 10px; }
+.scrollable::-webkit-scrollbar-track, .cat-body::-webkit-scrollbar-track { background: var(--surface-2); border-radius: 6px; }
+.scrollable::-webkit-scrollbar-thumb, .cat-body::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 6px; border: 2px solid var(--surface-2); }
+.scrollable {
+  background:
+    linear-gradient(var(--surface) 30%, transparent) top / 100% 36px local no-repeat,
+    linear-gradient(transparent, var(--surface) 70%) bottom / 100% 36px local no-repeat,
+    linear-gradient(color-mix(in srgb, var(--accent) 55%, transparent), transparent) top / 100% 16px scroll no-repeat,
+    linear-gradient(transparent, color-mix(in srgb, var(--accent) 55%, transparent)) bottom / 100% 16px scroll no-repeat,
+    var(--surface);
+}
+.scrollhint { grid-column: 1 / -1; position: sticky; bottom: 0; justify-self: center; z-index: 2; margin-top: 4px; padding: 2px 12px; border-radius: 999px; background: var(--accent); color: var(--accent-ink, #fff); font-size: 11.5px; font-weight: 700; pointer-events: none; transition: opacity .15s; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.scrollhint.gone { opacity: 0; }
+.nb .scrollhint, .poi-col .scrollhint { display: block; width: max-content; margin-left: auto; margin-right: auto; }
+@media print { .scrollhint { display: none; } }
+.cat-body { grid-auto-rows: max-content; }
+.scrollable { overflow-y: auto !important; }
+details.rsnote { margin-top: 6px; font-size: 12.5px; color: var(--text-2); }
+details.rsnote > summary { cursor: pointer; font-weight: 650; color: var(--text); list-style: none; display: inline-flex; gap: 6px; align-items: center; }
+details.rsnote > summary::-webkit-details-marker { display: none; }
+details.rsnote > summary::after { content: '\2304'; transition: transform .15s; }
+details.rsnote[open] > summary::after { transform: rotate(180deg); }
+details.rsnote > div { margin-top: 6px; line-height: 1.45; }
+#card-onward .ostat { font-weight: 700; }
+#card-onward .ostat.warn { color: var(--warning); } #card-onward .ostat.bad { color: var(--bad, #e5534b); } #card-onward .ostat.good { color: var(--good); }
+.hl { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; font-size: 11px; font-weight: 750; border-radius: 999px; padding: 1px 8px; white-space: nowrap; vertical-align: 1px; }
+.hl.cheap { color: var(--good-ink); background: color-mix(in srgb, var(--good) 16%, transparent); }
+.hl.fast { color: #6a3fb5; background: color-mix(in srgb, #8a5cf6 16%, transparent); }
+.hl.both { color: #fff; background: linear-gradient(90deg, var(--good), #8a5cf6); }
+:root[data-theme="dark"] .hl.cheap { color: var(--good); } :root[data-theme="dark"] .hl.fast { color: #b9a0ff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hl.cheap { color: var(--good); } :root:not([data-theme="light"]) .hl.fast { color: #b9a0ff; } }
+.item.hl-cheap { box-shadow: inset 4px 0 0 var(--good); background: color-mix(in srgb, var(--good) 5%, var(--surface, transparent)); }
+.item.hl-fast { box-shadow: inset 4px 0 0 #8a5cf6; background: color-mix(in srgb, #8a5cf6 5%, var(--surface, transparent)); }
+.item.hl-both { box-shadow: inset 4px 0 0 var(--good), inset 8px 0 0 #8a5cf6; background: color-mix(in srgb, var(--good) 5%, var(--surface, transparent)); }
+#card-transfer, #card-return { height: 720px; }
+.hlstrip { margin: 4px 0 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: color-mix(in srgb, var(--c-return) 5%, transparent); }
+.hlstrip .hlt { font-size: 12.5px; font-weight: 650; margin-bottom: 6px; }
+.hlstrip .hlrow { display: flex; flex-wrap: wrap; gap: 8px; }
+.hlpick { display: inline-flex; align-items: center; gap: 8px; flex: 1 1 260px; min-width: 0; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface, transparent); color: var(--text); text-decoration: none; font-size: 12.5px; }
+.hlpick:hover { border-color: var(--accent); }
+.hlpick .hl { margin-left: 0; }
+.hlpick .hn { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hlpick .hv { font-weight: 700; white-space: nowrap; }
+.hlstrip .hlnote { margin-top: 6px; font-size: 12px; color: var(--text-2); }
+.aproute { margin: 8px 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; display: grid; gap: 8px; font-size: 13px; line-height: 1.45; background: color-mix(in srgb, var(--c-return) 6%, transparent); }
+.aprcard .aprh, .aprcard .apr { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.45; padding: 8px 0; border-top: 1px solid var(--border); }
+.aprcard .aprh { border-top: 0; padding-top: 0; }
+.aprcard .ic { font-size: 18px; line-height: 1.2; flex: none; width: 22px; text-align: center; }
+#card-route { height: 640px; }
+.item.rt .legs { grid-column: 1 / -1; display: grid; gap: 4px; margin-top: 6px; }
+.item.rt .leg { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto auto; gap: 8px; align-items: baseline; font-size: 12.5px; padding: 5px 8px; border-radius: 8px; background: color-mix(in srgb, var(--c-transport) 6%, transparent); }
+.item.rt .leg .lic { text-align: center; }
+.item.rt .leg .lop { margin-left: 6px; color: var(--text-2); }
+.item.rt .leg .lnote { display: block; color: var(--text-2); font-size: 11.5px; }
+.item.rt .leg .lp { font-weight: 700; white-space: nowrap; }
+.item.rt .leg .ld { color: var(--text-2); white-space: nowrap; min-width: 62px; text-align: right; }
+.item.rt .lwait { font-size: 11.5px; color: var(--text-2); padding-left: 32px; }
+.pill.warnp { color: var(--warning-ink); background: color-mix(in srgb, var(--warning) 22%, transparent); }
+.rate { white-space: normal; }
+.rate .star { color: var(--star); font-size: 1.05em; margin-right: 1px; }
+.rate .rn { color: var(--text); font-weight: 750; }
+.rate .rs { color: var(--muted); font-weight: 500; }
+.rate .rv { color: var(--revc); font-weight: 650; }
+.rate .rsrc { color: var(--muted); }
+/* sidebar: long values wrap instead of pushing the card wider than the sidebar */
+.side { overflow-x: hidden; }
+.side .sc { overflow-wrap: anywhere; }
+.side .row { flex-wrap: wrap; }
+.side .row > span { min-width: 0; }
+.side .row b { white-space: normal; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.side .kv, .side .fxq { min-width: 0; }
+/* map place cards */
+.poi-col li.pcard { display: grid; grid-template-columns: minmax(0, 1fr); gap: 3px; padding: 9px 0; }
+.poi-col li.pcard > * { grid-column: 1; min-width: 0; }
+.pcard .ph { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-weight: 700; font-size: 14px; }
+.pcard .ph .tagi { margin-left: 0; }
+.pcard .pl { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 8px; align-items: baseline; font-size: 12.5px; color: var(--text-2); }
+.pcard .pk { color: var(--muted); font-size: 11.5px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; }
+.pcard .pl .mv { color: var(--text); font-weight: 600; }
+.pcard .pl .tm { white-space: nowrap; color: var(--text-2); }
+.pcard .pl a { word-break: normal; }
+.nb .nbphoto { display: block; position: relative; flex: 0 0 auto; margin: -2px -2px 8px; border-radius: 10px; overflow: hidden; height: 120px; min-height: 120px; background: var(--border); }
+.nb .nbphoto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nb .nbphoto .nbcredit { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 8px 3px; font-size: 10px; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,.6)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.poi-grid { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; gap: 14px; }
+.poi-grid > .poi-col { width: 100%; --sub-poi-h: 420px; }
+.poi-grid .poi-col ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); column-gap: 22px; }
+.poi-grid .poi-col li { min-width: 0; }
+.poi-grid .aprcard { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); column-gap: 22px; align-content: start; }
+.poi-grid .aprcard > h3 { grid-column: 1 / -1; }
+
+/* ===== phone layout (<= 760px): app-style screens, bottom navigation bar ===== */
+#bnav, #mtop { display: none; }
+body.m #mtop { display: flex; position: sticky; top: 0; z-index: 50; align-items: center; justify-content: space-between; gap: 10px; padding: calc(8px + env(safe-area-inset-top)) 14px 8px; background: color-mix(in srgb, var(--bg) 90%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+body.m #mtop .mt-title { font-weight: 750; font-size: 16px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.m #mtop .mt-total { flex: none; display: inline-flex; align-items: baseline; gap: 6px; border: 1px solid var(--border-strong); background: var(--surface); border-radius: 999px; padding: 6px 13px; font-size: 15px; font-weight: 750; cursor: pointer; }
+body.m #mtop .mt-total small { font-size: 11px; font-weight: 600; color: var(--muted); }
+body.m #bnav { display: grid; grid-template-columns: repeat(var(--n, 6), minmax(0, 1fr)); position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; gap: 2px; padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--surface) 92%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-top: 1px solid var(--border); box-shadow: 0 -4px 18px rgba(0,0,0,.12); }
+body.m #bnav button { display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 52px; padding: 4px 2px; border: 0; border-radius: 14px; background: none; color: var(--muted); font-size: 10.5px; font-weight: 650; line-height: 1.15; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+body.m #bnav button .ic { font-size: 21px; line-height: 1; filter: grayscale(.6); transition: transform .12s, filter .12s; }
+body.m #bnav button[aria-selected="true"] { color: var(--accent); background: var(--accent-soft); }
+body.m #bnav button[aria-selected="true"] .ic { filter: none; transform: translateY(-1px) scale(1.08); }
+body.m #bnav button .lb { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.m { padding-bottom: calc(76px + env(safe-area-inset-bottom)); -webkit-text-size-adjust: 100%; }
+body.m .wrap { width: 100%; }
+body.m .layout { display: block; padding-left: 0; }
+body.m .main-col { padding: 0 12px; }
+body.m .top { padding: 14px 0 8px; align-items: stretch; gap: 10px; }
+body.m h1 { font-size: 21px; line-height: 1.2; }
+body.m .top .meta { font-size: 13px; margin-top: 4px; gap: 3px 10px; }
+body.m .actions { width: 100%; }
+body.m .actions .btn { flex: 1 1 0; justify-content: center; min-height: 42px; }
+body.m .actions .btn:nth-child(3) { display: none; }
+body.m .gtabs, body.m .hint, body.m .cards-toolbar .muted { display: none !important; }
+body.m .cards-toolbar { margin: 0 0 10px; } body.m .cards-toolbar label { width: 100%; justify-content: space-between; }
+body.m .cards-toolbar select { min-height: 40px; }
+body.m .tiers { display: flex; overflow-x: auto; gap: 8px; margin: 6px -12px 12px; padding: 2px 12px 6px; scrollbar-width: none; scroll-snap-type: x proximity; }
+body.m .tiers::-webkit-scrollbar { display: none; }
+body.m .tiers > * { flex: 0 0 auto; min-width: 122px; scroll-snap-align: start; }
+body.m .summary-row { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+body.m .side { display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-flow: row; grid-auto-columns: auto; overflow: visible; margin: 0 0 14px; padding: 0; gap: 10px; scroll-snap-type: none; }
+body.m .total-big { font-size: 40px; }
+/* one screen at a time */
+body.m.scr-trip #items, body.m.scr-trip #weather, body.m.scr-trip #mapSection, body.m.scr-trip .cards-toolbar { display: none !important; }
+body.m:not(.scr-trip) .top, body.m:not(.scr-trip) .entry, body.m:not(.scr-trip) .summary-row, body.m:not(.scr-trip) .master, body.m:not(.scr-trip) #side, body.m:not(.scr-trip) #foot { display: none !important; }
+body.m:not(.scr-es) #weather, body.m:not(.scr-es) #mapSection { display: none !important; }
+body.m:not(.scr-trip) .tiers { margin-top: 10px; }
+/* cards: full width, tall enough to use, list scrolls inside */
+body.m .cats { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+body.m .cat-card { height: auto !important; max-height: none !important; overflow: visible; border-radius: 16px; }
+body.m .cat-body { flex: none; max-height: none !important; overflow: visible !important; padding-bottom: 6px; }
+body.m .cat-card .showing { display: none; }
+body.m .mmore { margin: 6px 10px 10px; width: calc(100% - 20px); min-height: 46px; justify-content: center; font-weight: 700; }
+body.m .nb-fold .nbn { display: none; }
+body.m .cat-head { position: sticky; top: 52px; z-index: 5; background: var(--surface); border-radius: 16px 16px 0 0; }
+body.m .cat-head { padding: 12px 14px 8px; }
+body.m .cat-head h2 { font-size: 17px; }
+body.m .chip { min-height: 38px; padding: 6px 13px; font-size: 13.5px; }
+body.m .chiprow { padding-left: 10px; padding-right: 10px; }
+body.m .chiprow .scr { display: none; }
+body.m input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
+body.m .btn { min-height: 40px; }
+body.m .cat-body > .item { max-height: none; overflow: visible; grid-template-columns: 30px minmax(0, 1fr); gap: 6px 10px; padding: 12px; }
+body.m .cat-body > .item > :first-child { grid-column: 1; grid-row: 1; align-self: start; }
+body.m .cat-body > .item > div:nth-child(2) > .name { grid-column: 2; grid-row: 1; }
+body.m .cat-body > .item > div:nth-child(2) > .meta { grid-column: 1 / -1; grid-row: auto; }
+body.m .cat-body > .item > .right { grid-column: 1 / -1; grid-row: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; text-align: left; border-top: 1px dashed var(--border); padding-top: 8px; }
+body.m .cat-body > .item > .right .price { font-size: 20px; }
+body.m .cat-body > .item > .right .btn { min-height: 38px; }
+body.m .cat-body > .fcard { height: auto; min-height: 0; overflow: visible; }
+body.m .cat-body > .dtrip { max-height: none; overflow: visible; }
+body.m .nb, body.m .poi-col { max-height: none; overflow: visible; }
+body.m .poi-grid .poi-col ul { grid-template-columns: minmax(0, 1fr); }
+body.m .poi-grid .aprcard { grid-template-columns: minmax(0, 1fr); }
+body.m .hlpick { flex: 1 1 100%; }
+body.m .item.rt .leg { grid-template-columns: 24px minmax(0, 1fr) auto; } body.m .item.rt .leg .ld { grid-column: 2 / -1; text-align: left; }
+body.m .card.weather { max-height: none; }
+body.m .season { grid-template-columns: minmax(0, 1fr); }
+body.m .map-head { display: block; } body.m .map-controls { margin-top: 8px; width: 100%; } body.m .map-controls select { width: 100%; min-height: 42px; }
+body.m .loc { flex-wrap: wrap; } body.m .loc input { flex: 1 1 100%; min-height: 42px; }
+body.m .entry { padding: 12px 14px; border-width: 2px; margin: 0 0 12px; }
+body.m .entry h2 { font-size: 16px; gap: 8px; } body.m .entry h2 .ic { width: 24px; height: 24px; font-size: 14px; }
+body.m .entry .lead, body.m .entry .ebrief { margin-left: 0; font-size: 13px; }
+body.m .entry .toggle, body.m .entry:not([open]) .toggle { white-space: normal; max-width: 100%; margin-left: 0; font-size: 13px; padding: 8px 12px; text-align: center; }
+body.m .entry:not([open]) .toggle { width: 100%; }
+body.m .tiers { scroll-padding-left: 12px; }
+body.m .fcard { grid-template-columns: 24px minmax(0, 1fr); gap: 8px 10px; padding: 12px 10px; }
+body.m .fcard .right { grid-column: 2; text-align: left; justify-items: start; }
+body.m .fcard .tl { grid-template-columns: minmax(0, auto) minmax(52px, 1fr) minmax(0, auto); gap: 6px; }
+body.m .fcard .tl .pt b { font-size: 1.12rem; }
+body.m .fcard .tl .pt span { white-space: normal; font-size: .72rem; }
+body.m .fcard .tl .mid { font-size: .72rem; }
+body.m .fcard .tl .mid .route .stopm { padding: 0 4px; } body.m .fcard .tl .mid .route .seg { min-width: 8px; }
+body.m .cat-head { flex-wrap: wrap; gap: 4px 10px; }
+body.m .cat-head .title { min-width: 0; flex: 1 1 auto; flex-wrap: wrap; }
+body.m .cat-head .sub.small { flex: 1 1 100%; order: 3; }
+body.m .hlpick { flex-wrap: wrap; row-gap: 4px; }
+body.m .hlpick .hl { order: 1; } body.m .hlpick .hv { order: 2; margin-left: auto; }
+body.m .hlpick .hn { order: 3; flex: 1 1 100%; white-space: normal; overflow: visible; text-overflow: clip; }
+body.m .fcard .tl { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 8px; }
+body.m .fcard .tl > .pt:first-child { grid-column: 1; grid-row: 1; }
+body.m .fcard .tl > .pt.end { grid-column: 2; grid-row: 1; }
+body.m .fcard .tl > .mid { grid-column: 1 / -1; grid-row: 2; min-width: 0; }
+body.m .fcard .tl .mid .route .stopm small { white-space: normal; }
+@media print { #bnav, #mtop { display: none !important; } }
 </style>
 </head>
 <body>
@@ -564,6 +795,7 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
     <span class="small muted">Prices compare each line's full-trip cost (nightly rates × nights).</span>
   </div>
 
+  <nav class="gtabs" id="gtabs" role="tablist" aria-label="Trip sections"></nav>
   <main class="cats" id="items" aria-live="polite"></main>
 
   <section class="card weather" id="weather" hidden></section>
@@ -571,13 +803,11 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
   <section class="map-section" id="mapSection">
     <div class="map-head">
       <div>
-        <h2>Where you'll stay, and what's within 5 miles (8 km)</h2>
-        <div class="small muted">The map opens zoomed to about a mile (1.6 km) around the stay you have ticked, close enough to read the main roads, with its hospitals, pharmacies and grocery stores within 5 miles / 8 km (zoom out to see them all). Pick another stay, paste your own address or Google Maps link, or switch on more place types (nightlife, nature, hotels, car rental, transit) below. Curated pins ★ carry ratings from the source noted.</div>
+        <h2>What's near your stay (within 5 miles / 8 km)</h2>
+        <div class="small muted">Pick a stay, or paste your own address or Google Maps link, to see the hospitals, pharmacies and grocery stores near it (rated on Google Maps), plus nightlife, nature, hotels, car rental and stations. Use the tabs to show or hide a category.</div>
       </div>
       <div class="map-controls">
         <select id="staySelect" aria-label="Stay to explore"></select>
-        <button class="btn primary" id="exploreBtn" type="button">Explore 5-mile radius</button>
-        <label class="stay-toggle"><input type="checkbox" id="allStays"> Show all stays</label>
       </div>
     </div>
     <div class="loc">
@@ -586,8 +816,6 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
       <div class="msg" id="locMsg"></div>
     </div>
     <div class="chiprow"><div class="chips" id="chips"></div><span class="fade l"></span><span class="fade r"></span><button type="button" class="scr l" aria-label="Scroll left">‹</button><button type="button" class="scr r" aria-label="Scroll right">›</button></div>
-    <div id="map"></div>
-    <div class="map-status" id="mapStatus"></div>
     <div class="poi-grid" id="poiGrid"></div>
   </section>
 
@@ -598,7 +826,6 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
 </div>
 
 <script id="trip-data" type="application/json">__TRIP_DATA_JSON__</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" crossorigin=""></script>
 <script>
 (function () {
   'use strict';
@@ -612,12 +839,47 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
   const REAL_TIERS = TIERS.filter(t => !t.custom);
   const CATS = DATA.categories || [
     { id: 'flights', label: 'Flights' }, { id: 'lodging', label: 'Lodging' }, { id: 'car', label: 'Rental car' },
-    { id: 'transfer', label: 'Airport transfer' }, { id: 'activities', label: 'Activities & tours' }, { id: 'food', label: 'Food & daily spend' },
-    { id: 'transport', label: 'Local transport' }, { id: 'sim', label: 'SIM & mobile data' }, { id: 'insurance', label: 'Insurance & fees' }, { id: 'other', label: 'Other' }
+    { id: 'transfer', label: 'Airport transfer' }, { id: 'return', label: 'Return to airport' }, { id: 'activities', label: 'Activities & tours' }, { id: 'food', label: 'Food & daily spend' },
+    { id: 'transport', label: 'Daily Transportation Spend Estimate' }, { id: 'sim', label: 'SIM & mobile data' }, { id: 'insurance', label: 'Insurance & fees' }, { id: 'other', label: 'Other' }
   ];
-  const catColor = id => `var(--c-${['flights','lodging','car','transfer','activities','food','transport','sim','insurance','other'].includes(id) ? id : 'other'})`;
+  const catColor = id => `var(--c-${['flights','lodging','car','transfer','return','activities','food','transport','sim','insurance','other'].includes(id) ? id : 'other'})`;
   const items = (DATA.items || []).map(it => ({ ...it, tiers: it.tiers || (it.tier ? [it.tier] : []), default_on: it.default_on !== false }));
   const pois = DATA.pois || [];
+  // Hospitals, pharmacies and grocery stores come from the rated list (trip.pois: big chains only, rating + review count
+  // read on Google Maps). Without any rated places of a kind, that kind falls back to the OpenStreetMap list.
+  const poiCat = p => { const t = String(p.type || '').toLowerCase(); return /hospital|clinic|medical/.test(t) ? 'hospital' : /pharm/.test(t) ? 'pharmacy' : /grocer|supermarket/.test(t) ? 'grocery' : null; };
+  const curatedCats = new Set(['hospital', 'pharmacy', 'grocery'].filter(c => pois.some(p => poiCat(p) === c)));
+  const nReviews = n => n == null || n === '' ? '' : Number(String(n).replace(/[,+]/g, '')).toLocaleString('en-US');
+  const rateSpan = (rating, scale, reviews, src) => `<span class="rate"><span class="star">★</span> <b class="rn">${esc(Number(rating).toFixed(1))}</b>${scale ? `<span class="rs">/${esc(scale)}</span>` : ''}${reviews != null && reviews !== '' && reviews !== 0 ? ` · <span class="rv">${esc(nReviews(reviews))} reviews</span>` : ''}${src ? ` <span class="rsrc">· ${src}</span>` : ''}</span>`;
+  const ratingLine = p => p.rating != null ? rateSpan(p.rating, p.rating_scale, p.reviews, p.rating_source ? esc(p.rating_source) : '') : `<span class="muted">no rating${p.rating_source ? ' · ' + esc(p.rating_source) : ''}</span>`;
+  // hours as "9 AM - 5 PM" (or "24 h"); walking and driving times are estimates from the straight-line distance
+  function fmtHours(h) {
+    if (!h) return '';
+    let t = String(h).trim();
+    if (/not shown|unknown|n\/a/i.test(t)) return '';
+    if (/24 ?h|24 hours|open 24/i.test(t)) return '24 h';
+    t = t.replace(/^(open|daily|every day)\b[:\s]*/i, '').replace(/^daily\s*/i, '');
+    const t12 = (hh, mm) => { hh = +hh; const ap = hh >= 12 && hh < 24 ? 'PM' : 'AM', h12 = hh % 12 === 0 ? 12 : hh % 12; return h12 + (mm && mm !== '00' ? ':' + mm : '') + ' ' + ap; };
+    return t.replace(/\b([01]?\d|2[0-3]):([0-5]\d)\b/g, (m, hh, mm) => t12(hh, mm)).replace(/\s*[-–]\s*/g, ' - ').trim();
+  }
+  const walkTxt = miles => { const m = Math.round(miles * 1.609344 * 1.25 / 4.8 * 60); return m <= 60 ? (m < 1 ? '1 min' : m + ' min') : ''; };
+  const driveTxt = miles => { const rk = miles * 1.609344 * 1.35, m = Math.max(2, Math.round(rk / (rk < 3 ? 20 : 30) * 60 + 1)); return m < 60 ? m + ' min' : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`; };
+  function placeLI(p, cat) {
+    const hrs = fmtHours(p.hours), w = walkTxt(p.dist), tel = p.tel ? String(p.tel).trim() : '';
+    const er = cat === 'hospital' && p.er_24h ? '<span class="tagi" style="color:var(--critical)">ER</span>' : '';
+    const intl = cat === 'hospital' && (p.intl || INTL.test(p.name + ' ' + (p.ownership || ''))) ? '<span class="tagi">private / intl</span>' : '';
+    const out = p.dist > 5 ? '<span class="tagi" style="color:var(--muted)">outside 5 mi / 8 km</span>' : '';
+    return `<li class="pcard"><div class="ph"><a href="${dirTo(p.name, p.lat, p.lng, p.url)}" target="_blank" rel="noopener noreferrer" title="Directions from your stay">${esc(p.name)}</a>${er}${intl}${out}</div>
+      ${hrs ? `<div class="pl"><span class="pk">Hours</span><span class="mv">${esc(hrs)}</span></div>` : ''}
+      <div class="pl"><span class="pk">Distance</span><span><span class="mv">${kmTxt(p.dist)}</span>${w ? ` · <span class="tm" title="Estimated walking time">🚶 ${w}</span>` : ''} · <span class="tm" title="Estimated driving time">🚗 ${driveTxt(p.dist)}</span></span></div>
+      ${p.rating != null ? `<div class="pl"><span class="pk">Rating</span><span>${rateSpan(p.rating, p.rating_scale, p.reviews, '')}</span></div>` : ''}
+      ${tel ? `<div class="pl"><span class="pk">Tel</span><a href="tel:${esc(tel.replace(/[^\d+]/g, ''))}">${esc(tel)}</a></div>` : ''}</li>`;
+  }
+  function curatedFor(st, cat) {
+    const all = pois.filter(p => poiCat(p) === cat).map(p => ({ ...p, dist: mi(st.lat, st.lng, p.lat, p.lng), tags: {} })).sort((a, b) => a.dist - b.dist);
+    const near = all.filter(p => p.dist <= 5), far = all.filter(p => p.dist > 5);
+    return cat === 'hospital' ? near.concat(far.slice(0, 3)) : (near.length ? near : far.slice(0, 3));   // hospitals always list the nearest few beyond 5 mi too
+  }
   const PER_VENDOR = 5;
 
   const d0 = new Date(trip.start_date + 'T00:00:00'), d1 = new Date(trip.end_date + 'T00:00:00');
@@ -631,14 +893,18 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
   const toC = f => f == null || f === '' ? '' : Math.round((Number(f) - 32) * 5 / 9);   // every °F also shows °C
   const kmTxt = m => `${m.toFixed(1)} mi (${(m * 1.609344).toFixed(1)} km)`;            // every distance in miles and km
   const KEY = 'tripdash:' + slug(trip.title + trip.start_date + trip.end_date);
+  const MQ = matchMedia('(max-width: 760px)');   // phones
+  // A fingerprint of this build's lines and defaults. Ticks saved in a browser belong to the build they were made on: when the lines
+  // change (a redone search, new stays), the saved ticks no longer match and would silently drop lines (e.g. the stay) from a total.
+  const DATA_SIG = (() => { let h = 5381; const str = items.map(i => i.id + (i.custom_default ? '*' : '') + (i.default_on ? '+' : '')).join('|'); for (let k = 0; k < str.length; k++) h = ((h << 5) + h + str.charCodeAt(k)) | 0; return String(h); })();
   const tierLabel = id => (TIERS.find(t => t.id === id) || {}).label || id;
 
   // ---- state -----------------------------------------------------------
-  const state = { tier: 'budget', checked: {}, customInit: false, stayId: null, customLoc: null,
-                  cats: new Set(['hospital','pharmacy','grocery']), allStays: false, sort: 'price_asc', vendorTab: {}, tierTab: {}, areaTab: {}, dish: 'all', selOpen: false };
+  const state = { rtKind: 'all', rtSort: 'price', stayType: 'all', bagCarry: false, bagChecked: false, airport: 'all', group: 'fl', tier: 'custom', checked: {}, customInit: false, stayId: null, customLoc: null,
+                  cats: new Set(['hospital','pharmacy','grocery']), sort: 'price_asc', vendorTab: {}, tierTab: {}, areaTab: {}, modeTab: {}, dish: 'all', selOpen: true, mCap: {}, mSig: {} };
   const store = {
-    load() { try { const s = JSON.parse(localStorage.getItem(KEY) || '{}'); ['tier','checked','customInit','customLoc','sort'].forEach(k => { if (s[k] !== undefined) state[k] = s[k]; }); if (s.mapCats) state.cats = new Set(s.mapCats); if (s.allStays !== undefined) state.allStays = !!s.allStays; } catch (e) {} },
-    save() { try { localStorage.setItem(KEY, JSON.stringify({ tier: state.tier, checked: state.checked, customInit: state.customInit, customLoc: state.customLoc, mapCats: [...state.cats], allStays: state.allStays, sort: state.sort })); } catch (e) {} }
+    load() { try { const s = JSON.parse(localStorage.getItem(KEY) || '{}'); if (s.dataSig !== DATA_SIG) { delete s.checked; delete s.customInit; delete s.customRule; } ['checked','customInit','customRule','customLoc','sort'].forEach(k => { if (s[k] !== undefined) state[k] = s[k]; }); if (s.mapCats) state.cats = new Set(s.mapCats); } catch (e) {} },
+    save() { try { localStorage.setItem(KEY, JSON.stringify({ dataSig: DATA_SIG, tier: state.tier, checked: state.checked, customInit: state.customInit, customRule: state.customRule, customLoc: state.customLoc, mapCats: [...state.cats], sort: state.sort })); } catch (e) {} }
   };
   store.load();
   if (!TIERS.some(t => t.id === state.tier)) state.tier = 'budget';
@@ -647,11 +913,15 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
   const ck = (tier, it) => `${tier}:${it.id}`;
   const CUSTOM_BASE = items.some(it => it.tiers.includes('mid')) ? 'mid' : 'budget';
   const isOn = (tier, it) => state.checked[ck(tier, it)] !== undefined ? !!state.checked[ck(tier, it)] : (it.default_on && it.tiers.includes(tier === 'custom' ? CUSTOM_BASE : tier));  // lines added after Custom was first opened start from mid-tier
+  const CUSTOM_RULE = 'private-stay-v1';   // bump to rebuild every visitor's Custom ticks once
   function initCustom() {
-    if (state.customInit) return;
+    if (state.customInit && state.customRule === CUSTOM_RULE) return;
     const base = items.some(it => it.tiers.includes('mid')) ? 'mid' : 'budget';
-    items.forEach(it => { state.checked[ck('custom', it)] = it.tiers.includes(base) && it.default_on; });
-    state.customInit = true; store.save();
+    const cdGroups = new Set(items.filter(it => it.custom_default && it.exclusive_group).map(it => it.exclusive_group));
+    items.forEach(it => {
+      state.checked[ck('custom', it)] = (it.exclusive_group && cdGroups.has(it.exclusive_group)) ? !!it.custom_default : !!(it.tiers.includes(base) && it.default_on);
+    });
+    state.customInit = true; state.customRule = CUSTOM_RULE; store.save();
   }
   function setOn(tier, it, val) {
     if (val && it.exclusive_group) {
@@ -659,7 +929,7 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
     }
     state.checked[ck(tier, it)] = !!val;
     store.save(); renderAll();
-    if (map && it.category === 'lodging') { if (val && it.lat != null) state.stayId = it.id; syncStays(false); }
+    if (it.category === 'lodging') { if (val && it.lat != null) state.stayId = it.id; syncStays(false); }
   }
 
   // ---- maths -----------------------------------------------------------
@@ -718,9 +988,215 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
     const isBag = it => vendorOf(it) === 'Checked bags';
     return arr.slice().sort((x, y) => isBag(x) - isBag(y) || by(x, y));  // bag-fee lines stay under the flights
   }
+  // ---- proof of onward travel: a card in Other Essentials ----
+  function onwardHTML() {
+    const ow = trip.onward_ticket;
+    if (!ow || !(ow.options || []).length) return '';
+    const row = o => `<div class="item"><span class="ico" aria-hidden="true">🎫</span><div>
+        <div class="name">${o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener noreferrer">${esc(o.name)}</a>` : esc(o.name)}</div>
+        <div class="meta">${(o.features || []).map(f => `<span class="pill tag">✓ ${esc(f)}</span>`).join('')}</div>
+        ${o.note ? `<div class="details">${esc(o.note)}</div>` : ''}
+      </div><div class="right">${o.price ? `<div class="calc">${esc(o.price)}</div>` : ''}${o.url ? `<a class="btn sm link" href="${esc(o.url)}" target="_blank" rel="noopener noreferrer">${esc(o.cta || 'Open')} ↗</a>` : ''}</div></div>`;
+    return `<section class="cat-card" id="card-onward" data-cat="onward">
+      <div class="cat-head"><div class="title"><span class="dot" style="background:var(--c-other)"></span><h2>Proof of onward travel</h2><span class="count">${ow.options.length} option${ow.options.length === 1 ? '' : 's'}</span></div><div class="sub">not in totals</div></div>
+      ${ow.status || ow.note ? `<details class="gnote gdet"${state.onwardOpen ? ' open' : ''}><summary><span class="ostat ${esc(ow.level || 'good')}">${esc(ow.status || 'Do you need it?')}</span></summary>${ow.note ? esc(ow.note) : ''}</details>` : ''}
+      <div class="cat-body" tabindex="0" aria-label="Proof of onward travel options">${ow.options.map(row).join('')}${ow.tip ? `<div class="item"><span class="ico" aria-hidden="true">⚠️</span><div><div class="name">Never use a fake ticket</div><div class="details">${esc(ow.tip)}</div></div><div class="right"></div></div>` : ''}</div>
+      <div class="showing">Real tickets or PNR-checkable reservations only.</div></section>`;
+  }
+  // ---- whole trip: the cheapest way from the origin to the stay, as a chain of legs ----
+  const RT = DATA.routes || {};
+  const RT_ICON = { bus: '🚌', minivan: '🚐', train: '🚆', flight: '✈️', ferry: '⛴️', rideshare: '🚕', taxi: '🚖', songthaew: '🛺', walk: '🚶', metro: '🚇', private: '🚘', shared: '🚐', tuktuk: '🛺' };
+  const hmin = m => m == null ? '' : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') + ' min' : ''}`;
+  const clock = iso => iso ? String(iso).slice(11, 16) : '';
+  const dayTxt = iso => { const d = new Date(String(iso).slice(0, 10) + 'T12:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' }); };
+  function routeLast(r, st) {
+    const area = st && st.neighborhood; if (!area) return null;
+    if (r.ends_at === 'HKT') {
+      const c = items.filter(it => it.category === 'transfer' && it.neighborhood === area && it.price != null && it.duration_min && !it.id.startsWith('transfer-pattaya'))
+        .sort((a, b) => line(a) - line(b) || a.duration_min - b.duration_min)[0];
+      return c ? { mode: c.mode || 'private', from: `${(trip.arrival_airport || {}).iata || 'Airport'} airport`, to: nbName(area), operator: c.provider, price: line(c), duration_min: c.duration_min, url: c.url, verified: !!c.verified, note: c.name } : null;
+    }
+    const m = (((RT.last_mile || {})[r.ends_at] || {})[area]);
+    return m ? { mode: m.mode || 'songthaew', from: r.ends_at, to: nbName(area), operator: m.name || '', price: Number(m.price), duration_min: m.duration_min, url: m.url, verified: !!m.verified, note: m.note || '' } : null;
+  }
+  function routeCalc(r, st) {
+    const last = routeLast(r, st), price = r.price + (last ? last.price : 0), dur = r.duration_min + (last ? last.duration_min || 0 : 0);
+    let arrive = null;
+    try {
+      const a = new Date(r.arrive); a.setMinutes(a.getMinutes() + (r.kind === 'flight' ? 30 : 0) + (last ? last.duration_min || 0 : 0));
+      arrive = isNaN(a) ? null : a;
+    } catch (e) { }
+    const startDay = String(trip.start_date || '').slice(0, 10), arrDay = arrive ? `${arrive.getFullYear()}-${String(arrive.getMonth() + 1).padStart(2, '0')}-${String(arrive.getDate()).padStart(2, '0')}` : '';
+    return { ...r, last, total: price, mins: dur, arrive_at: arrive, arrDay, onTime: arrDay && startDay ? arrDay <= startDay : null, verifiedAll: r.verified && (!last || last.verified) };
+  }
+  function routeHTML() {
+    const R = (RT.routes || []);
+    if (!R.length) return '';
+    const st = selectedStay();
+    const all = R.map(r => routeCalc(r, st));
+    const kinds = [['all', 'All'], ['flight', '✈️ Fly'], ['overland', '🚌 Overland']].filter(([k]) => k === 'all' || all.some(r => r.kind === k));
+    const rk = kinds.some(([k]) => k === state.rtKind) ? state.rtKind : 'all';
+    const pool = all.filter(r => rk === 'all' || r.kind === rk);
+    const cheapest = all.reduce((m, r) => r.total < m.total ? r : m), fastest = all.reduce((m, r) => r.mins < m.mins ? r : m);
+    const ontime = all.filter(r => r.onTime);
+    const cheapOn = ontime.length ? ontime.reduce((m, r) => r.total < m.total ? r : m) : null;
+    const sorted = pool.slice().sort(state.rtSort === 'time' ? (a, b) => a.mins - b.mins || a.total - b.total : (a, b) => a.total - b.total || a.mins - b.mins);
+    const pick = (r, cls, lab) => r ? `<a href="#" class="hlpick ${cls}" data-rtjump="${esc(r.id)}"><span class="hl ${cls}">${lab}</span><span class="hn">${esc(r.title)}</span><span class="hv mono">${money2(r.total)} · ${hmin(r.mins)}</span></a>` : '';
+    const both = cheapest.id === fastest.id;
+    const stripRows = (both ? pick(cheapest, 'both', '💲⚡ Cheapest &amp; fastest') : pick(cheapest, 'cheap', '💲 Cheapest') + pick(fastest, 'fast', '⚡ Fastest')) +
+      (cheapOn && cheapOn.id !== cheapest.id ? pick(cheapOn, 'cheap', `💲 Cheapest that arrives ${dayTxt(trip.start_date)}`) : '');
+    const legHTML = (l, i, n) => `<div class="leg"><span class="lic" aria-hidden="true">${RT_ICON[l.mode] || '🧭'}</span><span class="ltxt"><b>${esc(l.from)} → ${esc(l.to)}</b>
+        <span class="lop">${l.url ? `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.operator || l.mode)} ↗</a>` : esc(l.operator || l.mode)}${l.flight_no ? ' ' + esc(l.flight_no) : ''}</span>
+        ${l.depart && l.arrive ? `<span class="muted">${esc(clock(l.depart))}–${esc(clock(l.arrive))}${String(l.arrive).slice(0, 10) !== String(l.depart).slice(0, 10) ? ' (+1 day)' : ''}</span>` : ''}
+        ${l.verified ? '' : '<span class="badge est" title="Estimate, not read live">≈</span>'}${l.note ? `<span class="lnote">${esc(l.note)}</span>` : ''}</span>
+        <span class="lp mono">${money2(l.price)}</span><span class="ld">${hmin(l.duration_min)}</span></div>
+        ${i < n - 1 && l.wait_after_min ? `<div class="lwait">⏳ ${hmin(l.wait_after_min)} ${l.mode === 'bus' || l.mode === 'minivan' || l.mode === 'taxi' ? 'at the airport / station before the next leg' : 'to connect'}</div>` : ''}`;
+    const row = r => {
+      const legs = r.legs.concat(r.last ? [r.last] : []);
+      const hl = r.id === cheapest.id && r.id === fastest.id ? ' hl-both' : r.id === cheapest.id ? ' hl-cheap' : r.id === fastest.id ? ' hl-fast' : '';
+      const badges = (r.id === cheapest.id && r.id === fastest.id ? '<span class="hl both">💲⚡ Cheapest &amp; fastest</span>' : r.id === cheapest.id ? '<span class="hl cheap">💲 Cheapest</span>' : r.id === fastest.id ? '<span class="hl fast">⚡ Fastest</span>' : '') +
+        (cheapOn && r.id === cheapOn.id && r.id !== cheapest.id ? '<span class="hl cheap">💲 Cheapest on time</span>' : '');
+      const when = r.arrive_at ? `<span class="pill ${r.onTime ? 'tag' : 'warnp'}">${r.onTime ? '✓ Arrives' : '⚠ Arrives'} ${esc(r.arrive_at.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' }))} ${esc(String(r.arrive_at.getHours()).padStart(2, '0') + ':' + String(r.arrive_at.getMinutes()).padStart(2, '0'))}</span>` : '';
+      const leave = r.depart ? `<span class="pill tag">Leave ${esc(r.legs[0].from)} ${esc(clock(r.depart))}${String(r.depart).slice(0, 10) !== String(trip.start_date || '').slice(0, 10) ? ' ' + esc(dayTxt(r.depart)) : ''}</span>` : '';
+      return `<div class="item rt${hl}" data-rtid="${esc(r.id)}"><span class="ico" aria-hidden="true">🧭</span><div>
+          <div class="name">${esc(r.title)}${badges}</div>
+          <div class="meta">${leave}${when}${!r.last ? '<span class="pill warnp" title="No price for the last leg to your stay">+ last leg to your stay not priced</span>' : ''}</div>
+          <div class="legs">${legs.map((l, i) => legHTML(l, i, legs.length)).join('')}</div>
+        </div><div class="right"><div class="price mono">${money2(r.total)}</div><div class="calc">per person · ${esc(hmin(r.mins))} total</div>${r.verifiedAll ? '<span class="badge ok">✓ Live prices</span>' : '<span class="badge est" title="At least one leg is an estimate">≈ Some estimates</span>'}</div></div>`;
+    };
+    const chips = `<span class="lbl">Route</span>` + kinds.map(([k, lab]) => `<button type="button" class="chip" data-rtkind="${k}" aria-pressed="${rk === k}">${lab} <span class="n">${k === 'all' ? all.length : all.filter(r => r.kind === k).length}</span></button>`).join('') +
+      `<span class="lbl2 apt">Sort</span><button type="button" class="chip" data-rtsort="price" aria-pressed="${state.rtSort !== 'time'}">Cheapest first</button><button type="button" class="chip" data-rtsort="time" aria-pressed="${state.rtSort === 'time'}">Fastest first</button>`;
+    return `<section class="cat-card" id="card-route" data-cat="route">
+      <div class="cat-head"><div class="title"><span class="dot" style="background:var(--c-transport)"></span><h2>Cheapest way to get there</h2><span class="count">${all.length} route${all.length === 1 ? '' : 's'}</span></div><div class="sub small muted">${esc(RT.origin || trip.origin.city)} → ${esc(st ? st.name : trip.destination.city)} · not in totals</div></div>
+      <div class="hlstrip"><div class="hlt">From ${esc(RT.origin || trip.origin.city)} to ${esc(st ? st.name : trip.destination.city)}${st && st.neighborhood ? ` (📍 ${esc(nbName(st.neighborhood))})` : ''}, one way, per person</div><div class="hlrow">${stripRows}</div>
+        ${RT.ferry ? `<details class="rsnote"><summary>⛴️ Ferries and boats: ${RT.ferry.toLowerCase().startsWith('no ') ? 'none help' : 'see options'}</summary><div>${esc(RT.ferry)}</div></details>` : ''}</div>
+      ${chipRow(chips)}
+      <div class="cat-body" tabindex="0" aria-label="Routes from ${esc(RT.origin || trip.origin.city)}">${sorted.map(row).join('') || '<div class="empty">No route for this filter.</div>'}</div>
+      <div class="showing">Each route is a chain of legs; the last leg is to the stay selected under "What's near your stay". Flight routes allow ${esc(String(RT.airport_buffer_min || 90))} min at the airport. Times are typical, so check the schedules before you go.</div></section>`;
+  }
+  // ---- airport cards: Cheapest and Fastest for the area of the stay you picked ----
+  const HL_CATS = new Set(['transfer', 'return']);
+  const MODE_LABEL = { bus: 'Public bus', shared: 'Shared minivan', rideshare: 'Ride app', taxi: 'Taxi', tuktuk: 'Tuk-tuk', private: 'Private car', other: 'Other' };
+  const modeOf = it => it.mode || 'private';
+  function modesOf(its) {
+    const cnt = {}; its.forEach(it => { const m = modeOf(it); cnt[m] = (cnt[m] || 0) + 1; });
+    return Object.keys(MODE_LABEL).filter(m => cnt[m]).map(id => ({ id, n: cnt[id] }));
+  }
+  const stayArea = () => { const st = selectedStay(); return st && st.neighborhood ? st.neighborhood : null; };
+  function bestOf(its) {
+    const area = stayArea();
+    const pool = its.filter(it => it.price != null && (area ? it.neighborhood === area : it.neighborhood));
+    if (!pool.length) return null;
+    const cheap = pool.reduce((m, it) => line(it) < line(m) || (line(it) === line(m) && (it.duration_min || 1e9) < (m.duration_min || 1e9)) ? it : m);
+    const timed = pool.filter(it => it.duration_min);
+    const fast = timed.length ? timed.reduce((m, it) => it.duration_min < m.duration_min || (it.duration_min === m.duration_min && (!!it.verified > !!m.verified || (!!it.verified === !!m.verified && line(it) < line(m)))) ? it : m) : null;
+    return { area, cheap, fast };
+  }
+  const hm = m => m == null ? '' : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') + ' min' : ''}`;
+  const durTxt = it => it.duration_min ? `≈ ${hm(it.duration_min)} door to door` : '';
+  function hlStripHTML(cat, hl) {
+    if (!hl) return '';
+    const st = selectedStay(), where = hl.area ? nbName(hl.area) : 'your stay';
+    const one = (it, cls, lab) => it ? `<a href="#" class="hlpick ${cls}" data-hljump="${esc(it.id)}"><span class="hl ${cls}">${lab}</span><span class="hn">${esc(it.name)}</span><span class="hv mono">${money2(line(it))}${it.duration_min ? ' · ' + hm(it.duration_min) : ''}</span></a>` : '';
+    const both = hl.fast && hl.cheap.id === hl.fast.id;
+    return `<div class="hlstrip"><div class="hlt">${cat === 'return' ? `From ${esc(st ? st.name : where)} (📍 ${esc(where)}) back to ${esc((trip.arrival_airport || {}).iata || 'the airport')}` : `From ${esc((trip.arrival_airport || {}).iata || 'the airport')} to ${esc(st ? st.name : where)} (📍 ${esc(where)})`}</div>
+      <div class="hlrow">${both ? one(hl.cheap, 'both', '💲⚡ Cheapest &amp; fastest') : one(hl.cheap, 'cheap', '💲 Cheapest') + one(hl.fast, 'fast', '⚡ Fastest')}</div>
+      ${cat === 'return' && (DATA.return_info || {}).rail ? `<div class="hlnote">${esc(DATA.return_info.rail)}</div>` : ''}</div>`;
+  }
+  // ---- tab groups: which cards share a tab ----
+  const TAB_GROUPS = [
+    { id: 'fl', label: 'Flights & Lodging', cats: ['flights', 'lodging'] },
+    { id: 'tr', label: 'Rental Cars & Transportation', cats: ['route', 'car', 'transfer', 'return', 'transport', 'ground'] },
+    { id: 'fd', label: 'Food', cats: ['food', 'restaurants', 'localfood'] },
+    { id: 'ac', label: 'Activities', cats: ['activities', 'daytrips'] },
+    { id: 'es', label: 'Other Essentials', cats: ['insurance', 'sim', 'onward', 'other'] },
+  ];
+  const groupOf = cat => (TAB_GROUPS.find(g => g.cats.includes(cat)) || TAB_GROUPS[TAB_GROUPS.length - 1]).id;
+  // cards that are taller than their maximum get a visible scrollbar and a "Scroll for more" hint; the rest stay plain
+  function markScrollable(root) {
+    const els = [...(root || document).querySelectorAll('.cat-body > .item, .cat-body > .dtrip, .nb, .poi-col')]
+      .filter(el => el.offsetParent !== null);                       // hidden tabs have no size to measure
+    els.forEach(el => { const o = el.querySelector(':scope > .scrollhint'); if (o) o.remove(); el.classList.remove('scrollable'); });   // writes
+    const over = els.map(el => el.scrollHeight > el.clientHeight + 2);                                                              // one read pass
+    els.forEach((el, k) => {                                                                                                         // writes
+      if (!over[k]) return;
+      el.classList.add('scrollable');
+    });
+  }
+  let _msT; addEventListener('resize', () => { clearTimeout(_msT); _msT = setTimeout(() => markScrollable(document), 200); });
+  function applyGroups(el) {
+    const cards = [...el.querySelectorAll('.cat-card[data-cat]')];
+    cards.forEach(c => { c.dataset.group = groupOf(c.dataset.cat); if (!['ground', 'daytrips'].includes(c.dataset.cat)) c.classList.add('wide'); });
+    const has = TAB_GROUPS.filter(g => cards.some(c => c.dataset.group === g.id));
+    if (!has.some(g => g.id === state.group)) state.group = (has[0] || TAB_GROUPS[0]).id;
+    cards.forEach(c => c.classList.toggle('g-off', c.dataset.group !== state.group));
+    const nav = document.getElementById('gtabs');
+    nav.innerHTML = has.map(g => `<button type="button" role="tab" data-group="${g.id}" aria-selected="${g.id === state.group}">${esc(g.label)}<span class="n">${cards.filter(c => c.dataset.group === g.id).length}</span></button>`).join('');
+    nav.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { state.group = b.dataset.group; applyGroups(el); }));
+    markScrollable(el);
+    mSync();
+  }
+  // ---- phone layout: a bottom navigation bar, one screen at a time (Trip overview + the five tab groups) ----
+  const M_SCREENS = [['trip', '🧭', 'Trip', 'Your trip'], ['fl', '✈️', 'Fly & stay'], ['tr', '🚗', 'Transport'], ['fd', '🍜', 'Food'], ['ac', '🎟️', 'Activities'], ['es', '🧳', 'Essentials']];
+  let mscr = 'trip';
+  function mSync() {
+    const on = MQ.matches; document.body.classList.toggle('m', on);
+    let nav = document.getElementById('bnav'), top = document.getElementById('mtop');
+    if (!on) { if (nav) nav.hidden = true; if (top) top.hidden = true; return; }
+    const present = new Set([...document.querySelectorAll('#items .cat-card[data-group]')].map(c => c.dataset.group));
+    const screens = M_SCREENS.filter(x => x[0] === 'trip' || present.has(x[0]));
+    if (!screens.some(x => x[0] === mscr)) mscr = 'trip';
+    if (!nav) { nav = document.createElement('nav'); nav.id = 'bnav'; nav.setAttribute('aria-label', 'Sections'); document.body.appendChild(nav); }
+    if (!top) { top = document.createElement('header'); top.id = 'mtop'; document.body.insertBefore(top, document.body.firstChild); }
+    nav.hidden = false; top.hidden = false; nav.style.setProperty('--n', screens.length);
+    nav.innerHTML = screens.map(x => `<button type="button" data-scr="${x[0]}" aria-selected="${x[0] === mscr}" aria-label="${esc((TAB_GROUPS.find(g => g.id === x[0]) || { label: x[3] }).label)}"><span class="ic" aria-hidden="true">${x[1]}</span><span class="lb">${esc(x[2])}</span></button>`).join('');
+    nav.querySelectorAll('button').forEach(b => b.addEventListener('click', () => mGo(b.dataset.scr)));
+    const cur = screens.find(x => x[0] === mscr) || screens[0], g = TAB_GROUPS.find(g => g.id === cur[0]);
+    top.innerHTML = `<span class="mt-title">${esc(g ? g.label : trip.destination.city + ' trip')}</span><button type="button" class="mt-total" aria-label="Open the trip overview"><small>${esc(tierLabel(state.tier))}</small><span class="mono">${fmtMoney.format(tierTotal(state.tier))}</span></button>`;
+    top.querySelector('.mt-total').addEventListener('click', () => mGo('trip'));
+    [...document.body.classList].filter(c => c.startsWith('scr-')).forEach(c => document.body.classList.remove(c));
+    document.body.classList.add('scr-' + mscr);
+  }
+  function mGo(id) {
+    mscr = id; if (id !== 'trip') state.group = id;
+    applyGroups(document.getElementById('items')); mSync(); window.scrollTo(0, 0);
+  }
+  MQ.addEventListener('change', () => { placeSide(); mSync(); });
+  // put one line in view: reset that card's filters, open its tab, scroll to the row
+  function jumpTo(id) {
+    const it = items.find(o => o.id === id); if (!it) return;
+    const cat = it.category;
+    state.vendorTab[cat] = 'all'; state.tierTab[cat] = 'all'; if (state.areaTab) state.areaTab[cat] = HL_CATS.has(cat) && it.neighborhood ? it.neighborhood : 'all'; if (state.modeTab) state.modeTab[cat] = 'all'; if (cat === 'lodging') state.stayType = 'all'; if (cat === 'flights') { state.airport = 'all'; state.bagCarry = false; state.bagChecked = false; if (state.partTab) state.partTab.flights = 'all'; }
+    state.group = groupOf(cat); if (MQ.matches) mscr = state.group; renderItems();
+    setTimeout(() => {
+      const cb = [...document.querySelectorAll('#items input[type="checkbox"][data-id]')].find(x => x.dataset.id === id);
+      const row = cb && (cb.closest('.fcard') || cb.closest('.item') || cb.parentElement); if (!row) return;
+      const body = row.closest('.cat-body'), card = row.closest('.cat-card');
+      if (body) body.scrollTop += row.getBoundingClientRect().top - body.getBoundingClientRect().top - (body.clientHeight - row.offsetHeight) / 2;   // inside the card first (instant)
+      if (card) window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - 16, behavior: 'auto' });   // then bring the card into view
+      row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 2300);
+    }, 40);
+  }
+  document.addEventListener('click', e => {   // in-page links to a card (e.g. "Compare rides") must open its tab first
+    const a = e.target.closest && e.target.closest('a[href^="#card-"]'); if (!a) return;
+    const g = groupOf(a.getAttribute('href').slice(6));
+    if (state.group !== g || (MQ.matches && mscr !== g)) { state.group = g; if (MQ.matches) mscr = g; applyGroups(document.getElementById('items')); }
+  }, true);
+  // ---- flights: filter by airport code (origin airports; destinations too when they differ) ----
+  const fOrigin = it => (it.flight && (it.flight.origin || (it.flight.legs && it.flight.legs[0] && it.flight.legs[0].from))) || '';
+  const fDest = it => (it.flight && (it.flight.destination || (it.flight.legs && it.flight.legs.length && it.flight.legs[it.flight.legs.length - 1].to))) || '';
+  function airportCodes(its) {
+    const fl = its.filter(it => it.flight), cnt = {}, dest = new Set(fl.map(fDest).filter(Boolean));
+    fl.forEach(it => { const o = fOrigin(it); if (o) cnt[o] = (cnt[o] || 0) + 1; if (dest.size > 1) { const d = fDest(it); if (d) cnt[d] = (cnt[d] || 0) + 1; } });
+    return Object.entries(cnt).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([code, n]) => ({ code, n }));
+  }
+  const freeBag = (it, kind) => !it.flight || ((it.flight.bags || {})[kind] === true);   // bag-fee lines carry no flight and stay visible
+  const STAY_TYPES = [['hostel', '🛏️', 'Hostel', 'A bed in a hostel dorm (shared room)'], ['private', '🚪', 'Private room', 'Your own room: hotel room, guesthouse room, or a private room at a host home'], ['entire', '🏠', 'Entire place', 'The whole apartment, villa or house to yourself']];
+  const stypeOf = it => it.stay_type || 'private';
+  const hasAirport = (it, code) => !it.flight || fOrigin(it) === code || fDest(it) === code;   // bag-fee lines carry no flight and stay visible
   function renderItems() {
     const tier = state.tier, el = document.getElementById('items'), pending = new Set(trip.pending || []);
-    el.innerHTML = (CATS.map(c => {
+    el.innerHTML = routeHTML() + (CATS.map(c => {
       const its = items.filter(it => it.category === c.id);
       if (!its.length) {
         if (!pending.has(c.id)) return '';
@@ -728,9 +1204,21 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
           <div class="cat-body"><div class="empty">Still searching ${esc(c.label.toLowerCase())}. This page reloads itself when the results are in.</div></div></section>`;
       }
       const vt = state.vendorTab[c.id] || 'all', tt = state.tierTab[c.id] || 'all';
-      const areas = c.id === 'lodging' ? areasOf(its) : [];
-      const at = areas.some(a => a.id === state.areaTab[c.id]) ? state.areaTab[c.id] : 'all';
-      const base = at === 'all' ? its : its.filter(it => (it.neighborhood || '_other') === at);
+      const hlc = HL_CATS.has(c.id), areas = c.id === 'lodging' || hlc ? areasOf(its, c.id) : [];
+      const at0 = state.areaTab[c.id] == null && hlc ? (stayArea() || 'all') : state.areaTab[c.id];
+      const at = areas.some(a => a.id === at0) ? at0 : 'all';
+      const hl = hlc ? bestOf(its) : null;
+      const modes = hlc ? modesOf(at === 'all' ? its : its.filter(it => (it.neighborhood || '_other') === at)) : [];
+      const md = modes.some(m => m.id === state.modeTab[c.id]) ? state.modeTab[c.id] : 'all';
+      const apc = c.id === 'flights' ? airportCodes(its) : [];
+      const ap = apc.some(a => a.code === state.airport) ? state.airport : 'all';
+      const base0 = at === 'all' ? its : its.filter(it => (it.neighborhood || '_other') === at);
+      const stOn = c.id === 'lodging' && its.some(it => it.stay_type), stSel = stOn && STAY_TYPES.some(x => x[0] === state.stayType) ? state.stayType : 'all';
+      const base0s = stSel === 'all' ? base0 : base0.filter(it => stypeOf(it) === stSel);
+      const base1 = ap === 'all' ? base0s : base0s.filter(it => hasAirport(it, ap));
+      const bagOn = c.id === 'flights' && (state.bagCarry || state.bagChecked);
+      const base1b = !bagOn ? base1 : base1.filter(it => (!state.bagCarry || freeBag(it, 'carry_on')) && (!state.bagChecked || freeBag(it, 'checked')));
+      const base = md === 'all' ? base1b : base1b.filter(it => modeOf(it) === md);
       const pd = c.id === 'flights' ? (state.partTab && state.partTab.flights) || 'all' : 'all';
       const pool0 = tt === 'all' ? base : base.filter(it => it.tiers.includes(tt));
       const pool = pd === 'all' ? pool0 : pool0.filter(it => periodOf(it.flight) === pd);
@@ -742,49 +1230,74 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
       const sub = its.filter(it => isOn(tier, it)).reduce((s, it) => s + line(it), 0);
       const areaChips = areas.length ? `<span class="lbl">Area</span><button type="button" class="chip" data-cat="${c.id}" data-area="all" aria-pressed="${at === 'all'}">All areas <span class="n">${its.length}</span></button>` +
         areas.map(a => `<button type="button" class="chip" data-cat="${c.id}" data-area="${esc(a.id)}" aria-pressed="${at === a.id}">${a.id === '_other' ? '' : '📍 '}${esc(a.name)} <span class="n">${a.n}</span></button>`).join('') : '';
+      const modeChips = modes.length > 1 ? `<span class="lbl">How</span><button type="button" class="chip" data-cat="${c.id}" data-mode="all" aria-pressed="${md === 'all'}">All <span class="n">${base1.length}</span></button>` +
+        modes.map(m => `<button type="button" class="chip" data-cat="${c.id}" data-mode="${esc(m.id)}" aria-pressed="${md === m.id}">${MODE_ICON[m.id] || '🚗'} ${esc(MODE_LABEL[m.id] || m.id)} <span class="n">${m.n}</span></button>`).join('') : '';
       const tierChips = `<span class="lbl">Tier</span><button type="button" class="chip" data-cat="${c.id}" data-tiertab="all" aria-pressed="${tt === 'all'}">All tiers <span class="n">${base.length}</span></button>` +
         REAL_TIERS.map(t => { const n = base.filter(it => it.tiers.includes(t.id)).length; return n ? `<button type="button" class="chip" data-cat="${c.id}" data-tiertab="${t.id}" aria-pressed="${tt === t.id}">${t.label} <span class="n">${n}</span></button>` : ''; }).join('');
+      const stypeChips = stOn ? `<span class="lbl2 apt">Type</span><button type="button" class="chip" data-stype="all" aria-pressed="${stSel === 'all'}">All <span class="n">${base0.length}</span></button>` +
+        STAY_TYPES.map(([id, ic, lab, tip]) => { const n = base0.filter(it => stypeOf(it) === id).length; return n ? `<button type="button" class="chip" data-stype="${id}" title="${esc(tip)}" aria-pressed="${stSel === id}">${ic} ${lab} <span class="n">${n}</span></button>` : ''; }).join('') : '';
+      const airportChips = apc.length > 1 ? `<span class="lbl2 apt">Airport</span><button type="button" class="chip" data-airport="all" aria-pressed="${ap === 'all'}">All</button>` +
+        apc.map(a => `<button type="button" class="chip" data-airport="${esc(a.code)}" aria-pressed="${ap === a.code}">${esc(a.code)} <span class="n">${a.n}</span></button>`).join('') : '';
       const partChips = c.id === 'flights' && pool0.some(it => it.flight) ? `<span class="lbl">Time of day</span><button type="button" class="chip" data-cat="flights" data-part="all" aria-pressed="${pd === 'all'}">All <span class="n">${pool0.length}</span></button>` +
         PERIODS.map(([k, lab]) => `<button type="button" class="chip" data-cat="flights" data-part="${k}" aria-pressed="${pd === k}">${lab} <span class="n">${pool0.filter(it => periodOf(it.flight) === k).length}</span></button>`).join('') : '';
+      const nFree = kind => base1.filter(it => it.flight && freeBag(it, kind) && (kind === 'carry_on' || !state.bagCarry || freeBag(it, 'carry_on'))).length;
+      const bagChips = c.id === 'flights' && base1.some(it => it.flight) ? `<span class="lbl2 apt">Bags</span>` +
+        `<button type="button" class="chip" data-bag="carry" aria-pressed="${state.bagCarry}" title="Only fares that include a carry-on bag at no extra charge">🎒 Free carry-on <span class="n">${base1.filter(it => it.flight && freeBag(it, 'carry_on')).length}</span></button>` +
+        `<button type="button" class="chip" data-bag="checked" aria-pressed="${state.bagChecked}" title="Only fares that include a checked bag at no extra charge">🧳 Free checked bag <span class="n">${base1.filter(it => it.flight && freeBag(it, 'checked')).length}</span></button>` : '';
       const vendorChips = `<span class="lbl">Site</span><button type="button" class="chip" data-cat="${c.id}" data-vendor="all" aria-pressed="${vt === 'all'}">All <span class="n">${pool.length}</span></button>` +
         vendors.map(([v, n]) => `<button type="button" class="chip" data-cat="${c.id}" data-vendor="${esc(v)}" aria-pressed="${vt === v}">${esc(v)} <span class="n">${n}</span></button>`).join('');
-      const showing = `Showing all ${shown.length}${at === 'all' ? '' : ' in ' + esc((areas.find(a => a.id === at) || {}).name || at)}${vt === 'all' ? '' : ' from ' + esc(vt)}${tt === 'all' ? '' : ' · ' + esc(tierLabel(tt))} · ${byDep ? 'earliest departure first' : (SORT_LABEL[state.sort] || 'cheapest first')}. Scroll inside the card for more.`;
+      const sig = [vt, tt, at, pd, ap, md, state.stayType, state.bagCarry, state.bagChecked, state.sort].join('|');
+      if (state.mSig[c.id] !== sig) { state.mSig[c.id] = sig; state.mCap[c.id] = 25; }
+      const mcap = MQ.matches ? (state.mCap[c.id] || 25) : Infinity, shownCap = shown.slice(0, mcap), mleft = shown.length - shownCap.length;
+      const showing = `Showing all ${shown.length}${at === 'all' ? '' : ' in ' + esc((areas.find(a => a.id === at) || {}).name || at)}${vt === 'all' ? '' : ' from ' + esc(vt)}${tt === 'all' ? '' : ' · ' + esc(tierLabel(tt))}${stSel === 'all' ? '' : ' · ' + esc((STAY_TYPES.find(x => x[0] === stSel) || [])[2] || '')}${c.id === 'flights' && state.bagCarry ? ' · free carry-on' : ''}${c.id === 'flights' && state.bagChecked ? ' · free checked bag' : ''} · ${byDep ? 'earliest departure first' : (SORT_LABEL[state.sort] || 'cheapest first')}. Scroll inside the card for more.`;
       return `<section class="cat-card${WIDE.has(c.id) ? ' wide' : ''}${c.id === 'lodging' && state.nbOpen && NB.length ? ' nb-open' : ''}" id="card-${c.id}" data-cat="${c.id}">
         <div class="cat-head"><div class="title"><span class="dot" style="background:${catColor(c.id)}"></span><h2>${esc(c.label)}</h2><span class="count">${its.length} option${its.length === 1 ? '' : 's'}</span></div><div class="sub mono">${fmtMoney.format(sub)}</div></div>
-        ${c.id === 'lodging' ? nbHTML() : ''}
+        ${c.id === 'lodging' ? nbHTML() : ''}${hlc ? hlStripHTML(c.id, hl) : ''}
         ${areaChips ? chipRow(areaChips) : ''}
-        ${chipRow(tierChips)}
-        ${partChips ? chipRow(partChips) : ''}
+        ${modeChips ? chipRow(modeChips) : ''}
+        ${chipRow(tierChips + airportChips + stypeChips)}
+        ${partChips || bagChips ? chipRow(partChips + bagChips) : ''}
         ${chipRow(vendorChips)}
-        <div class="cat-body" tabindex="0" aria-label="${esc(c.label)} options">${shown.map(it => itemHTML(it, tier)).join('') || '<div class="empty">Nothing here for this filter.</div>'}</div>
+        <div class="cat-body" tabindex="0" aria-label="${esc(c.label)} options">${shownCap.map(it => itemHTML(it, tier, hl)).join('') || '<div class="empty">Nothing here for this filter.</div>'}${mleft > 0 ? `<button type="button" class="btn mmore" data-mmore="${c.id}">Show ${Math.min(25, mleft)} more · ${mleft} left</button>` : ''}</div>
         <div class="showing">${showing}</div></section>`;
-    }).join('') || '<div class="card" style="grid-column:1/-1"><div class="empty">No options yet.</div></div>') + groundHTML() + dayTripsHTML() + foodGuideHTML() + restaurantsHTML();
+    }).join('') || '<div class="card" style="grid-column:1/-1"><div class="empty">No options yet.</div></div>') + groundHTML() + dayTripsHTML() + foodGuideHTML() + restaurantsHTML() + onwardHTML();
     const halves = [...el.querySelectorAll('.cat-card:not(.wide):not(.pair)')];
     if (halves.length % 2 === 1) halves[halves.length - 1].classList.add('span2');
     const pair = [...el.querySelectorAll('.cat-card.pair')];  // buses/trains and day trips sit side by side; alone, one takes the row
     if (pair.length === 1) pair[0].classList.add('span2');
+    applyGroups(el);
     initScrollers(el);
     el.querySelectorAll('.chip[data-dish]').forEach(b => b.addEventListener('click', () => { state.dish = b.dataset.dish; renderItems(); }));
     el.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', () => { const it = items.find(o => o.id === cb.dataset.id); setOn(tier, it, cb.checked); }));
+    el.querySelectorAll('.chip[data-rtkind]').forEach(b => b.addEventListener('click', () => { state.rtKind = b.dataset.rtkind; renderItems(); }));
+    el.querySelectorAll('.chip[data-rtsort]').forEach(b => b.addEventListener('click', () => { state.rtSort = b.dataset.rtsort; renderItems(); }));
+    el.querySelectorAll('[data-rtjump]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); const row = document.querySelector(`#card-route [data-rtid="${a.dataset.rtjump}"]`); if (!row) return; const body = row.closest('.cat-body'); body.scrollTop += row.getBoundingClientRect().top - body.getBoundingClientRect().top - 4; row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 2300); }));
+    el.querySelectorAll('[data-mmore]').forEach(b => b.addEventListener('click', () => { const y = window.scrollY; state.mCap[b.dataset.mmore] = (state.mCap[b.dataset.mmore] || 25) + 25; renderItems(); window.scrollTo(0, y); }));
+    el.querySelectorAll('.chip[data-stype]').forEach(b => b.addEventListener('click', () => { state.stayType = b.dataset.stype; state.vendorTab.lodging = 'all'; renderItems(); }));
+    el.querySelectorAll('.chip[data-bag]').forEach(b => b.addEventListener('click', () => { if (b.dataset.bag === 'carry') state.bagCarry = !state.bagCarry; else state.bagChecked = !state.bagChecked; state.vendorTab.flights = 'all'; renderItems(); }));
+    el.querySelectorAll('.chip[data-airport]').forEach(b => b.addEventListener('click', () => { state.airport = b.dataset.airport; state.vendorTab.flights = 'all'; renderItems(); }));
     el.querySelectorAll('.chip[data-vendor]').forEach(b => b.addEventListener('click', () => { state.vendorTab[b.dataset.cat] = b.dataset.vendor; renderItems(); }));
     el.querySelectorAll('.chip[data-tiertab]').forEach(b => b.addEventListener('click', () => { state.tierTab[b.dataset.cat] = b.dataset.tiertab; state.vendorTab[b.dataset.cat] = 'all'; renderItems(); }));
     el.querySelectorAll('.chip[data-part]').forEach(b => b.addEventListener('click', () => { state.partTab = state.partTab || {}; state.partTab.flights = b.dataset.part; state.vendorTab.flights = 'all'; renderItems(); }));
-    el.querySelectorAll('.chip[data-area]').forEach(b => b.addEventListener('click', () => { state.areaTab[b.dataset.cat] = b.dataset.area; state.vendorTab[b.dataset.cat] = 'all'; renderItems(); }));
+    el.querySelectorAll('.chip[data-area]').forEach(b => b.addEventListener('click', () => { state.areaTab[b.dataset.cat] = b.dataset.area; state.vendorTab[b.dataset.cat] = 'all'; state.modeTab[b.dataset.cat] = 'all'; renderItems(); }));
+    el.querySelectorAll('.chip[data-mode]').forEach(b => b.addEventListener('click', () => { state.modeTab[b.dataset.cat] = b.dataset.mode; state.vendorTab[b.dataset.cat] = 'all'; renderItems(); }));
+    el.querySelectorAll('[data-hljump]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); jumpTo(a.dataset.hljump); }));
     el.querySelectorAll('[data-showarea]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); showArea(b.dataset.showarea); }));
     // remember whether the neighborhoods fold is open, since every filter click re-renders the cards
     el.querySelectorAll('.chip[data-gmode]').forEach(b => b.addEventListener('click', () => { state.gmode = b.dataset.gmode; renderItems(); }));
     el.querySelectorAll('.chip[data-rkind]').forEach(b => b.addEventListener('click', () => { state.rkind = b.dataset.rkind; state.rcuisine = 'all'; renderItems(); }));
     el.querySelectorAll('.chip[data-rcuisine]').forEach(b => b.addEventListener('click', () => { state.rcuisine = b.dataset.rcuisine; renderItems(); }));
+    el.querySelectorAll('.gdet').forEach(d => d.addEventListener('toggle', () => { if (d.closest('#card-onward')) state.onwardOpen = d.open; else state.gnoteOpen = d.open; }));
     el.querySelectorAll('.nb-fold').forEach(d => d.addEventListener('toggle', () => { state.nbOpen = d.open; d.closest('.cat-card').classList.toggle('nb-open', d.open); }));
   }
   // ---- tourist neighborhoods: where the nightlife and food are, and the stays searched in each ----
   const NB = (DATA.neighborhoods || []).filter(n => n && n.id && n.name);
   const nbName = id => (NB.find(n => n.id === id) || {}).name || id;
-  function areasOf(its) {
+  function areasOf(its, cat) {
     if (!NB.length || !its.some(it => it.neighborhood)) return [];
     const out = NB.map(n => ({ id: n.id, name: n.name, n: its.filter(it => it.neighborhood === n.id).length })).filter(a => a.n);
     const other = its.filter(it => !it.neighborhood || !NB.some(n => n.id === it.neighborhood)).length;
-    if (other) out.push({ id: '_other', name: 'Elsewhere in the city', n: other });
+    if (other) out.push({ id: '_other', name: cat === 'transfer' ? `${trip.origin.city} side` : cat === 'return' ? 'Anywhere' : 'Elsewhere in the city', n: other });
     return out;
   }
   function showArea(id) {
@@ -798,8 +1311,9 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
       const here = st.filter(it => it.neighborhood === n.id), from = here.length ? Math.min(...here.map(it => line(it) / nights)) : null;
       const tags = (n.tags || []).map(t => `<span class="pill tag">${esc(t)}</span>`).join('');
       const maps = n.maps_url || ('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(n.name + ', ' + trip.destination.city));
+      const ph = n.image && n.image.thumb ? `<a class="nbphoto" href="${esc(n.image.page || n.image.full || n.image.thumb)}" target="_blank" rel="noopener noreferrer" title="Photo: ${esc(n.image.credit || '')}${n.image.license ? ' (' + esc(n.image.license) + ')' : ''}, Wikimedia Commons"><img src="${esc(n.image.thumb)}" alt="${esc(n.name)}" loading="lazy" referrerpolicy="no-referrer"><span class="nbcredit">Photo: ${esc((n.image.credit || 'Wikimedia Commons').slice(0, 40))}${n.image.license ? ', ' + esc(n.image.license) : ''}</span></a>` : '';
       return `<article class="nb" id="nb-${esc(n.id)}">
-        <h3>📍 ${esc(n.name)}${n.local_name ? `<span class="ln">${esc(n.local_name)}</span>` : ''}</h3>
+        ${ph}<h3>📍 ${esc(n.name)}${n.local_name ? `<span class="ln">${esc(n.local_name)}</span>` : ''}</h3>
         ${tags ? `<div class="tags">${tags}</div>` : ''}
         ${n.summary ? `<p>${esc(n.summary)}</p>` : ''}
         ${n.nightlife ? `<p>🍸 <strong>Nightlife:</strong> ${esc(n.nightlife)}</p>` : ''}
@@ -814,10 +1328,10 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
       <summary><span class="dot" style="background:#b0479a"></span><span class="nbt">Tourist neighborhoods: nightlife &amp; food</span>
         <span class="nbn">${NB.map(n => `<span>📍 ${esc(n.name)}</span>`).join('')}</span><span class="chev"></span></summary>
       <div class="nb-grid" tabindex="0" aria-label="Neighborhoods">${NB.map(tile).join('')}</div>
-      <div class="nb-note">Each area links to a map and a guide. "Show stays here" filters the stays below to that area; the map outlines each area.</div></details>`;
+      <div class="nb-note">Each area links to a map and a guide. "Show stays here" filters the stays below to that area.</div></details>`;
   }
   // ---- buses, trains & metro (same-country trips), popular day trips, best restaurants: not in the totals ----
-  const MODE_ICON = { bus: '🚌', train: '🚆', metro: '🚇', brt: '🚍', tram: '🚊', ferry: '⛴️', card: '💳', car: '🚗', tour: '🧭', rideshare: '🚕', walk: '🚶' };
+  const MODE_ICON = { shared: '🚐', taxi: '🚖', tuktuk: '🛺', private: '🚘', bus: '🚌', train: '🚆', metro: '🚇', brt: '🚍', tram: '🚊', ferry: '⛴️', card: '💳', car: '🚗', tour: '🧭', rideshare: '🚕', walk: '🚶' };
   const fmt2 = new Intl.NumberFormat(undefined, { style: 'currency', currency: trip.currency || 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const money2 = v => v == null || v === '' ? '' : (Number(v) < 100 ? fmt2 : fmtMoney).format(Number(v));
   const localCode = (trip.fx || {}).code || '';
@@ -837,7 +1351,7 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
     const cheapest = list => list.reduce((m, o) => (m == null || Number(o.price) < Number(m.price)) ? o : m, null);
     const cb = cheapest(opts.filter(o => o.price != null));
     const fl = items.filter(isFlightCard), cf = fl.length ? fl.reduce((m, it) => Number(it.price) < Number(m.price) ? it : m) : null;
-    const cmp = (G.summary || cb) ? `<div class="gnote">${esc(G.summary || '')}${G.summary && cb ? '<br>' : ''}${cb ? `Cheapest ${esc(cb.mode || 'bus')}: ${linkTo(cb.url, '<b>' + money2(cb.price) + '</b>')}${cb.duration_min ? ' · ' + fmtHM(cb.duration_min) : ''}` : ''}${cb && cf ? ` &nbsp;vs&nbsp; cheapest flight: ${linkTo(cf.url, '<b>' + money2(cf.price) + '</b>')}${cf.flight && cf.flight.total_min ? ' · ' + fmtHM(cf.flight.total_min) : ''} plus airport transfers` : ''}</div>` : '';
+    const cmp = (G.summary || cb) ? `<details class="gnote gdet"${state.gnoteOpen ? ' open' : ''}><summary>Overview: overland vs flying</summary>${esc(G.summary || '')}${G.summary && cb ? '<br>' : ''}${cb ? `Cheapest ${esc(cb.mode || 'bus')}: ${linkTo(cb.url, '<b>' + money2(cb.price) + '</b>')}${cb.duration_min ? ' · ' + fmtHM(cb.duration_min) : ''}` : ''}${cb && cf ? ` &nbsp;vs&nbsp; cheapest flight: ${linkTo(cf.url, '<b>' + money2(cf.price) + '</b>')}${cf.flight && cf.flight.total_min ? ' · ' + fmtHM(cf.flight.total_min) : ''} plus airport transfers` : ''}</details>` : '';
     const orow = o => `<div class="item"><span class="ico" aria-hidden="true">${MODE_ICON[o.mode] || '🚌'}</span><div>
         <div class="name">${linkTo(o.url, esc(o.operator || o.provider || 'Departure'))} ${o.class ? `<span class="pill">${esc(o.class)}</span>` : ''}</div>
         <div class="meta"><span><b>${fmtTime(o.depart)}</b> ${esc(o.from || '')} → <b>${fmtTime(o.arrive)}</b> ${esc(o.to || '')}${o.arrive && o.depart && String(o.arrive).slice(0, 10) !== String(o.depart).slice(0, 10) ? ' (+1 day)' : ''}</span>${o.duration_min ? `<span>${fmtHM(o.duration_min)}</span>` : ''}${rateHTML(o, 5)}${liveBadge(o)}</div>
@@ -1056,7 +1570,7 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
         <div class="ss">${rs.peak ? 'Wettest: ' + esc(rs.peak) + ' · ' : ''}${dry ? 'Driest: ' + esc(dry) : ''}${rs.source_url ? ` · <a href="${esc(rs.source_url)}" target="_blank" rel="noopener noreferrer">${esc(rs.source || 'Source')} ↗</a>` : ''}</div>
         <div class="status ${si.level}">${si.level === 'good' ? '✓' : '⚠'} ${esc(si.text)}</div>` : ''}
         ${st ? `<div class="pct">Rain likely on <b>≈ ${st.pct}%</b> of your days (about ${Math.round(st.expected)} of ${st.total})${st.fDays ? `: ${st.fRain} of ${st.fDays} forecast days show rain, the rest use the monthly normal` : ', from the monthly normal'}.</div>` : ''}
-        ${rs && rs.note ? `<div class="ss">${esc(rs.note)}</div>` : ''}
+        ${rs && rs.note ? `<details class="rsnote"><summary>How this was worked out</summary><div>${esc(rs.note)}</div></details>` : ''}
       </div>
       ${cm.length ? `<div><div class="rainchart" role="img" aria-label="Average rain by month; rainy-season months in blue; your trip outlined">${bars}</div>
         <div class="rainleg"><span><i style="background:var(--accent)"></i>Rainy season</span><span><i style="background:var(--border-strong)"></i>Drier months</span><span><i style="background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)"></i>Your trip</span><span>Average rain per month${W.climate_source ? ' · ' + esc(W.climate_source) : ''}${W.climate_source_url ? ` <a href="${esc(W.climate_source_url)}" target="_blank" rel="noopener noreferrer">↗</a>` : ''}</span></div></div>` : ''}
@@ -1091,7 +1605,7 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
     const side = document.getElementById('side'), main = document.getElementById('mainCol'), layout = side && side.parentElement;
     if (!side) return;
     const narrow = matchMedia('(max-width: 1180px)').matches;
-    if (narrow && side.parentElement !== main) main.insertBefore(side, main.querySelector('.top').nextSibling);
+    if (narrow) { const anchor = MQ.matches ? main.querySelector('#master') : main.querySelector('.top').nextSibling; if (anchor && (side.parentElement !== main || side.nextSibling !== anchor)) main.insertBefore(side, anchor); }
     if (!narrow && side.parentElement === main) document.querySelector('.layout').appendChild(side);
   }
   function renderSide() {
@@ -1116,10 +1630,10 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
     const on = items.filter(it => isOn(state.tier, it));
     if (on.length) {
       const tot = on.reduce((sum, it) => sum + line(it), 0);
-      const groups = CATS.map(c => [c, on.filter(it => it.category === c.id)]).filter(([, l]) => l.length);
+      const groups = selGroups(on);
       C.sel = `<details class="sc sel" id="selBox"${state.selOpen ? ' open' : ''}><summary><h3><span class="i">🧾</span>Your selection</h3>
         <div class="selsum"><span>${esc(tierLabel(state.tier))} · ${on.length} line${on.length === 1 ? '' : 's'}</span><b class="mono">${fmtMoney.format(tot)}</b></div><span class="chev" aria-hidden="true">⌄</span></summary>
-        <div class="selbody">${groups.map(([c, l]) => `<div class="selg"><div class="selc"><span class="dot" style="background:${catColor(c.id)}"></span>${esc(c.label)}</div>${l.map(it => `<div class="seli"><a href="${esc(it.url)}" target="_blank" rel="noopener noreferrer" title="Open on ${esc(it.provider)}">${esc(it.name)}</a><span class="mono">${fmtMoney.format(line(it))}</span><span class="via">${esc(it.provider)}${it.verified ? '' : ' · estimate'}</span></div>`).join('')}</div>`).join('')}
+        <div class="selbody">${groups.map(([c, l]) => `<div class="selg"><div class="selc"><span class="dot" style="background:${catColor(c.id)}"></span>${esc(c.label)}</div>${l.map(it => `<div class="seli" data-jump="${esc(it.id)}" role="button" tabindex="0" title="Show this line in its card"><span class="sn">${esc(it.name)}</span><span class="mono">${fmtMoney.format(line(it))}</span><span class="via">${esc(it.provider)}${it.verified ? '' : ' · estimate'}<a href="${esc(it.url)}" target="_blank" rel="noopener noreferrer" title="Open on ${esc(it.provider)}">open ↗</a></span></div>`).join('')}</div>`).join('')}
         <div class="seltot"><span>Total</span><b class="mono">${fmtMoney.format(tot)}</b></div></div></details>`;
     }
     // 3. rainy season
@@ -1160,7 +1674,11 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
       ${ow.status ? `<div class="status ${ow.level || 'good'}">${esc(ow.status)}</div>` : ''}${ow.note ? `<div class="line">${esc(ow.note)}</div>` : ''}
       <div class="onw">${ow.options.map(o => `<div class="op"><div class="nm">${esc(o.name)}</div><div class="pr">${esc(o.price || '')}</div>${(o.features || []).length ? `<div class="ft">${o.features.map(f => `<span>✓ ${esc(f)}</span>`).join('')}</div>` : ''}${o.note ? `<div class="tip" style="grid-column:1/-1">${esc(o.note)}</div>` : ''}<a class="get" href="${esc(o.url)}" target="_blank" rel="noopener noreferrer">${esc(o.cta || 'Open')} ↗</a></div>`).join('')}</div>
       ${ow.tip ? `<div class="tip" style="margin-top:8px">${esc(ow.tip)}</div>` : ''}</div>`;
-    el.innerHTML = ['entry', 'fx', 'sel', 'rain', 'cal', 'custom', 'ride', 'sim', 'onward'].map(k => C[k] || '').join('');
+    el.innerHTML = ['entry', 'fx', 'sel', 'rain', 'cal', 'custom', 'ride', 'sim'].map(k => C[k] || '').join('');
+    el.querySelectorAll('.seli[data-jump]').forEach(r => {
+      r.addEventListener('click', e => { if (e.target.closest('a')) return; jumpTo(r.dataset.jump); });
+      r.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); jumpTo(r.dataset.jump); } });
+    });
     const sb = el.querySelector('#selBox'); if (sb) sb.addEventListener('toggle', () => { state.selOpen = sb.open; });
     const b = el.querySelector('[data-side-custom]'); if (b) b.addEventListener('click', () => { switchTier('custom'); document.getElementById('tabs').scrollIntoView({ behavior: 'smooth' }); });
   }
@@ -1210,7 +1728,7 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
     const src = o.rating_source ? (o.rating_url ? `<a href="${esc(o.rating_url)}" target="_blank" rel="noopener noreferrer">${esc(o.rating_source)} ↗</a>` : esc(o.rating_source)) : '';
     if (o.rating != null) {
       const sc = o.rating_scale || defScale;
-      return `<span>★ ${esc(o.rating)}${sc ? '/' + esc(sc) : ''}${o.reviews ? ' · ' + revTxt(o.reviews) + ' reviews' : ''}${src ? ' · ' + src : ''}</span>`;
+      return `<span class="rate"><span class="star">★</span> <b class="rn">${esc(o.rating)}</b>${sc ? `<span class="rs">/${esc(sc)}</span>` : ''}${o.reviews ? ` · <span class="rv">${revTxt(o.reviews)} reviews</span>` : ''}${src ? ` <span class="rsrc">· ${src}</span>` : ''}</span>`;
     }
     return src ? `<span class="norate">No rating · ${src}</span>` : '';
   }
@@ -1294,7 +1812,6 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
           <span class="fact"><small>Legroom</small><span>${lr != null ? esc(lr) + ' in' : 'Not listed'}</span>${fit ? `<span class="fit ${fit[0]}">${esc(fit[1])}</span>` : ''}</span>
           <span class="fact" title="Bags included in the economy / basic fare shown"><small>Bags (Economy)</small><span>Carry-on ${bagMark((f.bags || {}).carry_on)}${bagWt((f.bags || {}).carry_on_kg, (f.bags || {}).carry_on_lb)} · Checked ${bagMark((f.bags || {}).checked)}${bagWt((f.bags || {}).checked_kg, (f.bags || {}).checked_lb)}</span></span>
         </div>
-        ${legs.length || it.details ? `<details><summary>Flight details${legs.length ? ` (${legs.length} leg${legs.length > 1 ? 's' : ''}${lays.length ? ', ' + lays.length + ' layover' + (lays.length > 1 ? 's' : '') : ''})` : ''}</summary>${legs.length ? `<div class="legs">${legHTML}</div>` : ''}${it.details ? `<div class="details">${esc(it.details)}</div>` : ''}</details>` : ''}
       </div>
       <div class="right">
         <div class="price mono">${fmtMoney.format(tot)}</div>
@@ -1303,8 +1820,10 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
         <a class="btn sm link" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Open on ${esc(it.provider)} ↗</a>
       </div></div>`;
   }
-  function itemHTML(it, tier) {
+  function itemHTML(it, tier, hl) {
     if (isFlightCard(it)) return flightHTML(it, tier);
+    const isC = hl && hl.cheap && hl.cheap.id === it.id, isF = hl && hl.fast && hl.fast.id === it.id;
+    const hlb = isC && isF ? '<span class="hl both">💲⚡ Cheapest &amp; fastest</span>' : isC ? '<span class="hl cheap">💲 Cheapest</span>' : isF ? '<span class="hl fast">⚡ Fastest</span>' : '';
     const on = isOn(tier, it), q = qtyFor(it), tot = line(it), cid = 'cb-' + slug(tier + '-' + it.id);
     const rating = rateHTML(it);
     const badge = it.verified
@@ -1313,11 +1832,11 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
     const calc = q !== 1 ? `${fmtMoney.format(it.price)} ${esc(unitLabel(it))} × ${q}` : esc(unitLabel(it));
     const tierPill = it.tiers.map(t => `<span class="pill tier">${esc(tierLabel(t))}</span>`).join('');
     const alts = (it.alternatives || []).length ? `<div class="alts">${it.alternatives.map(a => `<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">${esc(a.provider)}${a.price != null ? ' ' + fmtMoney.format(a.price) : ''} ↗</a>`).join('')}</div>` : '';
-    return `<div class="item${on ? '' : ' off'}">
+    return `<div class="item${on ? '' : ' off'}${isC && isF ? ' hl-both' : isC ? ' hl-cheap' : isF ? ' hl-fast' : ''}">
       <input type="checkbox" id="${cid}" data-id="${esc(it.id)}" ${on ? 'checked' : ''} aria-label="Include ${esc(it.name)}">
       <div>
-        <div class="name"><label for="${cid}">${esc(it.name)}</label></div>
-        <div class="meta"><span class="pill">${esc(it.provider)}</span>${it.neighborhood && NB.length ? `<span class="pill tag">📍 ${esc(nbName(it.neighborhood))}</span>` : ''}${(it.tags || []).map(t => `<span class="pill tag">${esc(t)}</span>`).join('')}${tierPill}${rating}${it.price_note ? `<span>${esc(it.price_note)}</span>` : ''}${it.address ? `<span>${esc(it.address)}</span>` : ''}</div>
+        <div class="name"><label for="${cid}">${HL_CATS.has(it.category) && it.mode ? (MODE_ICON[it.mode] || '🚗') + ' ' : ''}${esc(it.name)}</label>${hlb}</div>
+        <div class="meta"><span class="pill">${esc(it.provider)}</span>${it.duration_min ? `<span class="pill tag" title="${esc(it.duration_note || 'door to door estimate')}">⏱ ${esc(durTxt(it))}</span>` : ''}${it.neighborhood && NB.length ? `<span class="pill tag">📍 ${esc(nbName(it.neighborhood))}</span>` : ''}${(it.tags || []).map(t => `<span class="pill tag">${esc(t)}</span>`).join('')}${tierPill}${rating}${it.price_note ? `<span>${esc(it.price_note)}</span>` : ''}${it.address ? `<span>${esc(it.address)}</span>` : ''}</div>
         ${it.details ? `<div class="details">${esc(it.details)}</div>` : ''}
         ${alts}
       </div>
@@ -1330,6 +1849,28 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
   }
 
   // ---- summary ---------------------------------------------------------
+  // The order lines are listed in "Your selection" and in the copied summary: the order a trip happens in.
+  function selGroups(on) {
+    const og = slug(trip.origin.city || ''), isBag = it => it.kind === 'bags' || /^bags-/.test(it.id);
+    const originSide = it => it.leg === 'origin' || (og && (String(it.id).includes(og) || String(it.exclusive_group || '').includes(og)));   // origin city -> departure airport
+    const order = [
+      { label: 'Flight ticket', cat: 'flights', f: it => !isBag(it) },
+      { label: 'Checked bag', cat: 'flights', f: isBag },
+      { label: 'Transport to the airport', cat: 'transfer', f: originSide },
+      { label: 'SIM & mobile data', cat: 'sim' },
+      { label: 'Rental car', cat: 'car' },
+      { label: 'Transport to your stay', cat: 'transfer', f: it => !originSide(it) },
+      { label: 'Lodging', cat: 'lodging' },
+      { label: 'Activities & tours', cat: 'activities' },
+      { label: 'Food & daily spend', cat: 'food' },
+      { label: 'Daily Transportation Spend Estimate', cat: 'transport' },
+      { label: 'Return to airport', cat: 'return' },
+      { label: 'Insurance & fees', cat: 'insurance' }
+    ];
+    const known = new Set(order.map(g => g.cat));
+    CATS.filter(c => !known.has(c.id)).forEach(c => order.push({ label: c.label, cat: c.id }));   // anything else, last
+    return order.map(g => [{ id: g.cat, label: g.label }, on.filter(it => it.category === g.cat && (!g.f || g.f(it)))]).filter(([, l]) => l.length);
+  }
   function renderSummary() {
     const tier = state.tier, list = visibleItems(tier), on = list.filter(it => isOn(tier, it)), total = tierTotal(tier);
     document.getElementById('sumTierLabel').textContent = tierLabel(tier) + ' · selected total';
@@ -1347,13 +1888,13 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
     cmp.innerHTML = totals.map(t => `<div class="row${t.id === tier ? ' active' : ''}" data-tier="${t.id}" role="button" tabindex="0"><span>${t.label}</span><span class="track"><span class="fill" style="width:${(100 * t.v / max).toFixed(1)}%"></span></span><span class="mono">${fmtMoney.format(t.v)}</span></div>`).join('');
     cmp.querySelectorAll('.row').forEach(r => r.addEventListener('click', () => switchTier(r.dataset.tier)));
   }
-  function renderAll() { renderTabs(); renderItems(); renderSummary(); renderSide(); }
+  function renderAll() { if (state.tier === 'custom') initCustom(); renderTabs(); renderItems(); renderSummary(); renderSide(); mSync(); }
 
   // ---- copy summary ----------------------------------------------------
   document.getElementById('copyBtn').addEventListener('click', async () => {
     const tier = state.tier, on = visibleItems(tier).filter(it => isOn(tier, it));
     const lines = [`${trip.title} — ${tierLabel(tier)} tier`, `${fmtDate(trip.start_date)} – ${fmtDate(trip.end_date)}, ${travelers} traveler(s), ${trip.trip_type === 'one_way' ? 'one-way flight' : 'round trip'}. Prices checked ${fmtDate(trip.generated_at)}.`, ''];
-    CATS.forEach(c => { const its = on.filter(it => it.category === c.id); if (!its.length) return; lines.push(c.label.toUpperCase()); its.forEach(it => lines.push(`- ${it.name} — ${fmtMoney.format(line(it))}${it.verified ? '' : ' (estimate)'} [${it.provider}]\n  ${it.url}`)); lines.push(''); });
+    selGroups(on).forEach(([c, its]) => { lines.push(c.label.toUpperCase()); its.forEach(it => lines.push(`- ${it.name} — ${fmtMoney.format(line(it))}${it.verified ? '' : ' (estimate)'} [${it.provider}]\n  ${it.url}`)); lines.push(''); });
     lines.push(`TOTAL ${fmtMoney.format(tierTotal(tier))} (${fmtMoney.format(tierTotal(tier) / travelers)} per person)`);
     const text = lines.join('\n');
     try { await navigator.clipboard.writeText(text); flash('Summary copied'); }
@@ -1364,11 +1905,10 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
   // ---- theme -----------------------------------------------------------
   const root = document.documentElement;
   let theme = 'auto'; try { theme = localStorage.getItem('tripdash:theme') || 'auto'; } catch (e) {}
-  function applyTheme() { if (theme === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', theme); try { localStorage.setItem('tripdash:theme', theme); } catch (e) {} if (map) setTiles(); }
+  function applyTheme() { if (theme === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', theme); try { localStorage.setItem('tripdash:theme', theme); } catch (e) {} }
   const isDark = () => root.getAttribute('data-theme') === 'dark' || (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.getElementById('themeBtn').addEventListener('click', () => { theme = theme === 'auto' ? (isDark() ? 'light' : 'dark') : (theme === 'dark' ? 'light' : 'dark'); applyTheme(); });
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (map) setTiles(); });
-
+  
   // ---- map -------------------------------------------------------------
   const RADIUS_M = 8046.72; // 5 miles
   const MILE_M = 1609.34;
@@ -1389,6 +1929,15 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
   const stayKey = st => `${st.lat.toFixed(4)},${st.lng.toFixed(4)}`;
   const mi = (a, b, c, d) => { const R = 3958.8, toR = x => x * Math.PI / 180, dLat = toR(c - a), dLng = toR(d - b); const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a)) * Math.cos(toR(c)) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
   const gmaps = (name, lat, lng) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(name ? `${name}, ${trip.destination.city}` : `${lat},${lng}`);
+  // Google Maps directions from the stay selected on the map to a place (falls back to the place page when no stay is
+  // selected or the place is far away, like the embassy in another city)
+  const dirTo = (name, lat, lng, fallback) => {
+    const st = stays().find(it => it.id === state.stayId);
+    if (!st || st.lat == null || lat == null || mi(st.lat, st.lng, lat, lng) > 60) return fallback || gmaps(name, lat, lng);
+    const nm = (name || '').split(';')[0].trim();
+    const dest = nm ? `${nm}, ${trip.destination.city}` : `${lat},${lng}`;
+    return 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(`${st.lat},${st.lng}`) + '&destination=' + encodeURIComponent(dest) + '&travelmode=driving';
+  };
   function classify(t) {
     if (t.amenity === 'hospital' || t.healthcare === 'hospital') return 'hospital';
     if (t.amenity === 'pharmacy') return 'pharmacy';
@@ -1401,74 +1950,23 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
     return null;
   }
 
-  let map = null, tiles = null, stayLayer = null, poiLayer = null, curatedLayer = null, circle = null, ring = null;
   const customStay = () => state.customLoc ? { id: '__custom', name: '📍 ' + state.customLoc.label, lat: state.customLoc.lat, lng: state.customLoc.lng, provider: 'Your location', url: 'https://www.google.com/maps/search/?api=1&query=' + state.customLoc.lat + ',' + state.customLoc.lng, custom: true } : null;
   const stays = () => { const l = visibleItems(state.tier).filter(it => it.category === 'lodging' && it.lat != null && it.lng != null); const c = customStay(); return c ? [c, ...l] : l; };
 
-  function initMap() {
-    if (typeof L === 'undefined') { document.getElementById('mapStatus').textContent = 'Map library could not load (offline?). Links above still work.'; return; }
-    map = L.map('map', { scrollWheelZoom: false }).setView([trip.destination.lat, trip.destination.lng], 12);
-    setTiles();
-    stayLayer = L.layerGroup().addTo(map); poiLayer = L.layerGroup().addTo(map); curatedLayer = L.layerGroup().addTo(map);
-    NB.filter(n => n.lat != null && n.lng != null).forEach(n => {
-      const c = L.circle([n.lat, n.lng], { radius: n.radius_m || 700, color: '#b0479a', weight: 1.5, dashArray: '6 4', fillOpacity: 0.06 }).addTo(map);
-      c.bindTooltip(n.name, { permanent: true, direction: 'center', className: 'nb-tip' });
-      c.bindPopup(`<strong>📍 ${esc(n.name)}</strong>${n.nightlife ? '<br>🍸 ' + esc(n.nightlife) : ''}${n.food ? '<br>🍜 ' + esc(n.food) : ''}${items.some(it => it.neighborhood === n.id) ? `<br><a href="#" data-showarea="${esc(n.id)}">Show stays here</a>` : ''}`);
-    });
-    document.getElementById('allStays').checked = state.allStays;
-    syncStays(false);
-  }
-  function setTiles() {
-    if (!map) return;
-    if (tiles) map.removeLayer(tiles);
-    tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
-    document.getElementById('map').classList.toggle('dark-tiles', isDark());
-  }
-  const CURATED_DEFAULT = /hospital|clinic|medical|pharm|drug|grocer|supermarket|market/i;
-  function renderCurated() {
-    curatedLayer.clearLayers();
-    const st = stays().find(it => it.id === state.stayId);
-    pois.filter(p => state.allStays || (st && mi(st.lat, st.lng, p.lat, p.lng) <= 5 && CURATED_DEFAULT.test(p.type + ' ' + p.name))).forEach(p => {
-      const m = L.marker([p.lat, p.lng], { icon: L.divIcon({ className: '', html: '<div class="star-pin">★</div>', iconSize: [22, 22], iconAnchor: [11, 11] }), title: p.name });
-      m.bindPopup(`<strong>${esc(p.name)}</strong><br>${esc(p.type)}${p.rating != null ? ` · ★ ${esc(p.rating)}${p.rating_scale ? '/' + esc(p.rating_scale) : ''}${p.rating_source ? ' (' + esc(p.rating_source) + ')' : ''}` : ''}${p.note ? '<br>' + esc(p.note) : ''}<br><a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">Open source page ↗</a>`);
-      curatedLayer.addLayer(m);
-    });
-  }
+  function initNearby() { syncStays(false); }
   function syncStays(reset) {
-    if (!map) return;
     const list = stays(), sel = document.getElementById('staySelect');
     sel.innerHTML = list.length ? list.map(it => `<option value="${esc(it.id)}">${esc(it.name)}</option>`).join('') : '<option value="">No stay with coordinates in this tier</option>';
     if (reset || !list.some(it => it.id === state.stayId)) { const def = list.find(it => !it.custom && isOn(state.tier, it)) || list[0]; state.stayId = def ? def.id : null; }
     sel.value = state.stayId || '';
-    stayLayer.clearLayers(); poiLayer.clearLayers();
-    list.forEach((it, i) => {
-      if (!state.allStays && it.id !== state.stayId) return;
-      const on = it.custom || isOn(state.tier, it);
-      const m = L.marker([it.lat, it.lng], { icon: L.divIcon({ className: '', html: `<div class="stay-pin" style="background:${it.custom ? 'var(--accent)' : (on ? 'var(--c-lodging)' : '#8a8880')}"><span>${it.custom ? '★' : i + (customStay() ? 0 : 1)}</span></div>`, iconSize: [30, 30], iconAnchor: [15, 30], popupAnchor: [0, -28] }), title: it.name });
-      m.bindPopup(`<strong>${esc(it.name)}</strong>${it.custom ? '' : '<br>' + fmtMoney.format(line(it))}${it.address ? '<br>' + esc(it.address) : ''}<br><a href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">${it.custom ? 'Open in Google Maps' : 'Open on ' + esc(it.provider)} ↗</a> · <a href="#" data-explore="${esc(it.id)}">Explore 5 mi</a>`);
-      m.on('click', () => { state.stayId = it.id; sel.value = it.id; explore(); });
-      stayLayer.addLayer(m);
-    });
-    if (list.length && reset && state.allStays) { const b = L.latLngBounds(list.map(it => [it.lat, it.lng])); map.fitBounds(b.pad(0.35), { maxZoom: 14 }); }
-    drawCircle(); renderCurated();
     lastExplored = null;
-    document.getElementById('poiGrid').innerHTML = ''; document.getElementById('mapStatus').textContent = list.length ? 'Loading what is near your stay…' : 'Add lat/lng to lodging items, or paste your own address above.';
+    document.getElementById('poiGrid').innerHTML = list.length ? '' : '<div class="card"><div class="empty">Add lat/lng to lodging items, or paste your own address above.</div></div>';
     renderChips({});
     if (state.stayId) explore();
   }
-  function drawCircle() {
-    if (circle) { map.removeLayer(circle); circle = null; }
-    if (ring) { map.removeLayer(ring); ring = null; }
-    const st = stays().find(it => it.id === state.stayId);
-    if (st) {
-      circle = L.circle([st.lat, st.lng], { radius: RADIUS_M, color: '#2a78d6', weight: 1.5, fillOpacity: 0.03, dashArray: '4 4', interactive: false }).addTo(map);
-      ring = L.circle([st.lat, st.lng], { radius: MILE_M, color: '#2a78d6', weight: 1, fill: false, opacity: 0.7, interactive: false }).addTo(map);
-    }
-  }
-  document.getElementById('staySelect').addEventListener('change', e => { state.stayId = e.target.value; const keep = state.stayId; syncStays(false); state.stayId = keep; });
-  document.getElementById('allStays').addEventListener('change', e => { state.allStays = e.target.checked; store.save(); const keep = state.stayId; syncStays(state.allStays); state.stayId = keep; });
-  document.getElementById('exploreBtn').addEventListener('click', explore);
-  document.getElementById('map').addEventListener('click', e => { const s = e.target.closest('a[data-showarea]'); if (s) { e.preventDefault(); showArea(s.dataset.showarea); return; } const a = e.target.closest('a[data-explore]'); if (a) { e.preventDefault(); state.stayId = a.dataset.explore; document.getElementById('staySelect').value = state.stayId; explore(); } });
+  document.getElementById('staySelect').addEventListener('change', e => { state.stayId = e.target.value; const keep = state.stayId; syncStays(false); state.stayId = keep; areaChanged(); });
+  let lastHLArea;
+  function areaChanged() { const a = stayArea(); if (a !== lastHLArea) { lastHLArea = a; Object.keys(state.areaTab).forEach(k => { if (HL_CATS.has(k)) delete state.areaTab[k]; }); renderItems(); } }
 
   // ---- your own location: Google Maps link or address -------------------
   function parseLatLng(text) {
@@ -1499,7 +1997,7 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
     }
     state.customLoc = { lat: ll[0], lng: ll[1], label }; store.save();
     msg.textContent = `Using ${label} (${ll[0].toFixed(4)}, ${ll[1].toFixed(4)}).`;
-    syncStays(false); state.stayId = '__custom'; document.getElementById('staySelect').value = '__custom'; drawCircle(); map.setView(ll, 13); explore();
+    syncStays(false); state.stayId = '__custom'; document.getElementById('staySelect').value = '__custom'; explore();
   }
   document.getElementById('locBtn').addEventListener('click', useLocation);
   document.getElementById('locInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); useLocation(); } });
@@ -1561,18 +2059,53 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
     const out = {}; cats.forEach(c => { out[c] = (nb.cats[c] || []).map(p => ({ ...p, tags: p.tags || {} })); });
     return { results: out, fetched_at: nb.fetched_at };
   }
-  const gmapsLinks = st => Object.entries(POI_CATS).map(([id, c]) => `<a href="https://www.google.com/maps/search/${encodeURIComponent(c.gm)}/@${st.lat},${st.lng},14z" target="_blank" rel="noopener noreferrer">${c.icon} ${esc(c.label)}</a>`).join(' · ');
 
-  function rideLinks(st) {
-    const ap = trip.arrival_airport;
-    if (!ap || ap.lat == null || !st) return '';
-    const t = target => ` target="_blank" rel="noopener noreferrer"`;
+  // ---- airport -> selected stay: road distance, ride-app time and fares, public transport ----
+  const nbOf = id => NB.find(n => n.id === id);
+  const stopName = (n, toward) => { const segs = String(n || '').split(';').map(x => x.trim()); return (segs.find(x => toward && /towards airport/i.test(x)) || segs[0]).replace(/\s*\(.*?\)/g, '').trim(); };
+  function busLeg(st) {
+    const AB = DATA.airport_bus || {}, area = st.neighborhood;
+    const stops = (AB.routes || []).flatMap(r => (r.stops || []).filter(x => x.lat != null && x.lng != null).map(x => ({ ...x, route: r, d: mi(st.lat, st.lng, x.lat, x.lng) })));
+    if (!stops.length) return null;
+    const s0 = stops.slice().sort((a, b) => (a.area === area ? 0 : 1) - (b.area === area ? 0 : 1) || a.d - b.d)[0];
+    const near = stops.slice().sort((a, b) => a.d - b.d)[0];
+    const x = near.d < s0.d - 0.6 ? near : s0;
+    const walkKm = x.d * 1.609344 * 1.25, walkMin = Math.round(walkKm / 4.8 * 60);
+    const wait = x.every_min ? Math.round(x.every_min / 2) : 15;
+    const ride = x.ride_from_airport_min || x.ride_to_airport_min;
+    return { x, walkKm, walkMin, wait, ride, total: ride ? ride + wait + (walkKm <= 2 ? walkMin : 15) : null, lastLeg: walkKm > 2 };
+  }
+  function apRouteHTML(st, km, min, live) {
+    const ap = trip.arrival_airport, area = st.neighborhood, nb = nbOf(area);
+    const drv = ((DATA.airport_bus || {}).drive || []).find(d => d.area === area);
+    const apps = items.filter(it => it.category === 'transfer' && it.mode === 'rideshare' && it.neighborhood === area).sort((a, b) => a.price - b.price).filter((a, i, l) => l.findIndex(x => x.provider === a.provider) === i);
+    const t = ' target="_blank" rel="noopener noreferrer"';
     const dir = `https://www.google.com/maps/dir/?api=1&origin=${ap.lat},${ap.lng}&destination=${st.lat},${st.lng}&travelmode=driving`;
-    const uber = 'https://m.uber.com/ul/?action=setPickup&pickup%5Blatitude%5D=' + ap.lat + '&pickup%5Blongitude%5D=' + ap.lng + '&pickup%5Bnickname%5D=' + encodeURIComponent(ap.name || ap.iata || 'Airport') +
-      '&dropoff%5Blatitude%5D=' + st.lat + '&dropoff%5Blongitude%5D=' + st.lng + '&dropoff%5Bnickname%5D=' + encodeURIComponent(st.name);
-    const km = mi(ap.lat, ap.lng, st.lat, st.lng) * 1.609;
-    const apps = (trip.ride_apps || []).map(r => ` · <a href="${esc(r.url)}"${t()}>${esc(r.name)} ↗</a>`).join('');
-    return `<div class="small" style="margin-top:4px">From ${esc(ap.name || ap.iata)} to ${esc(st.name)} (about ${km.toFixed(0)} km / ${(km / 1.609344).toFixed(0)} mi in a straight line): <a href="${dir}"${t()}>Driving directions ↗</a>${trip.uber_available === false ? '' : ` · <a href="${uber}"${t()}>Uber fare ↗</a>`}${apps}${trip.uber_available === false ? ' · Uber does not operate here; see the Airport transfer card for prices' : ''}</div>`;
+    const transit = `https://www.google.com/maps/dir/?api=1&origin=${ap.lat},${ap.lng}&destination=${st.lat},${st.lng}&travelmode=transit`;
+    const rideMin = min != null ? min + 10 : null;
+    const ride = `<div class="apr"><span class="ic">🚕</span><div><b>Ride app or taxi</b>: ${min != null ? `≈ ${hm(min)} driving without traffic${drv && drv.min_traffic ? `, ≈ ${hm(drv.min_traffic)} in traffic` : ''}; allow ≈ 10 min to book and meet the driver (≈ ${hm(rideMin)} door to door)` : 'drive time unknown'}.
+        ${apps.length ? `<br>${apps.map(a => `${linkTo(a.url, esc(a.provider) + ' ≈ ' + money2(a.price))}`).join(' · ')}${apps.some(a => !a.verified) ? ' <span class="muted">(estimates, not live quotes)</span>' : ''}` : ''}
+        ${trip.uber_available === false ? '<br><span class="muted">Uber does not operate here.</span>' : ''}</div></div>`;
+    const b = busLeg(st);
+    const bus = b ? `<div class="apr"><span class="ic">🚌</span><div><b>Public transport</b>: ${linkTo(b.x.route.url, esc(b.x.route.name.split(' (')[0]))} from ${esc(ap.iata || 'the airport')} to <b>${esc(stopName(b.x.stop))}</b>${b.ride ? ` (${hm(b.ride)} ride` : ''}${b.x.every_min ? `, every ${b.x.every_min} min` : ''}${b.ride ? ')' : ''}, then ${b.lastLeg ? `about ${b.walkKm.toFixed(1)} km by tuk-tuk or Grab` : `a ${b.walkKm >= 1 ? b.walkKm.toFixed(1) + ' km' : Math.round(b.walkKm * 100) * 10 + ' m'} walk (≈ ${b.walkMin} min)`}.
+        <br>${b.x.route.fare_usd != null ? `<b>${money2(b.x.route.fare_usd)}</b>${b.x.route.fare_thb ? ` (THB ${b.x.route.fare_thb})` : ''} · ` : ''}${b.total ? `≈ ${hm(b.total)} door to door incl. the wait` : ''}${b.x.from_airport_first || b.x.to_airport_first ? ` · from ${esc(ap.iata || 'airport')} ${esc(b.x.from_airport_first || '')}${b.x.from_airport_last ? '–' + esc(b.x.from_airport_last) : ''}` : ''}</div></div>` :
+      `<div class="apr"><span class="ic">🚌</span><div><b>Public transport</b>: <a href="${transit}"${t}>see transit options in Google Maps ↗</a></div></div>`;
+    return `<div class="aprh"><span class="ic">✈️</span><div><b>${esc(ap.iata || ap.name)} → ${esc(st.name)}</b>${nb ? ` <span class="muted">(📍 ${esc(nb.name)})</span>` : ''}<br>
+        ${km != null ? `<b class="mono">${km.toFixed(1)} km (${(km / 1.609344).toFixed(1)} mi)</b> by road` : ''}
+        · · <a href="${dir}"${t}>Driving directions ↗</a> · <a href="${transit}"${t}>Transit directions ↗</a> · <a href="#card-return">Return to airport ↓</a></div></div>${ride}${bus}`;
+  }
+  let routeState = null;
+  function paintRouteCard() {
+    const box = document.getElementById('apRoute'); if (!box || !routeState) return;
+    box.innerHTML = `<h3><span aria-hidden="true">✈️</span>Getting to your stay</h3>` + apRouteHTML(routeState.st, routeState.km, routeState.min, routeState.live);
+  }
+  function renderRoute(st) {
+    const ap = trip.arrival_airport;
+    if (!ap || ap.lat == null) return;
+    if (!st) { routeState = null; return; }
+    const km = st.airport_km != null ? st.airport_km : mi(ap.lat, ap.lng, st.lat, st.lng) * 1.609344 * 1.3;   // road km from the router, else straight line x 1.3
+    routeState = { st, km, min: st.airport_drive_min != null ? st.airport_drive_min : null };
+    paintRouteCard();
   }
 
   let lastExplored = null, exploring = false, forceLive = false;
@@ -1580,53 +2113,52 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
     const st = stays().find(it => it.id === state.stayId);
     if (!st || exploring) return;
     exploring = true; lastExplored = st.id;
-    drawCircle(); renderCurated(); map.fitBounds(L.latLng(st.lat, st.lng).toBounds(2 * MILE_M), { padding: [8, 8], maxZoom: 16 });
-    poiLayer.clearLayers();
-    const status = document.getElementById('mapStatus'), grid = document.getElementById('poiGrid');
-    const cats = Object.keys(POI_CATS).filter(c => state.cats.has(c));
-    const gm = `<div class="small" style="margin-top:4px">Ratings and reviews: open in Google Maps near this spot → ${gmapsLinks(st)}</div>${rideLinks(st)}`;
-    const current = () => { const r = {}; cats.forEach(c => { r[c] = cache.has(stayKey(st) + '|' + c) ? cache.get(stayKey(st) + '|' + c) : undefined; }); return r; };
-    const counts = r => { const k = {}; cats.forEach(c => { if (r[c]) k[c] = r[c].length; else if (r[c] === null) k[c] = '!'; }); return k; };
-    const summary = r => cats.map(c => `${r[c] === null ? 'failed' : r[c] === undefined ? '…' : r[c].length} ${POI_CATS[c].label.toLowerCase()}`).join(' · ');
+    renderRoute(st);
+    const allCats = Object.keys(POI_CATS).filter(c => state.cats.has(c)), cats = allCats.filter(c => !curatedCats.has(c));
+    const full = r => { const o = { ...r }; allCats.forEach(c => { if (curatedCats.has(c)) o[c] = curatedFor(st, c); }); return o; };
+    const current = () => { const r = {}; cats.forEach(c => { const k = stayKey(st) + '|' + c; if (cache.has(k)) r[c] = cache.get(k); }); return r; };
+    const counts = r0 => { const r = full(r0), k = {}; allCats.forEach(c => { if (r[c]) k[c] = r[c].length; else if (r[c] === null) k[c] = '!'; }); return k; };
     const snap = forceLive ? null : snapshotFor(st, cats);
     if (snap) {
-      renderChips(counts(snap.results)); renderPoiCols(st, snap.results);
-      status.innerHTML = `Within 5 miles (8 km) of ${esc(st.name)}: ${esc(summary(snap.results))}. OpenStreetMap snapshot from ${fmtDate(snap.fetched_at)} <button type="button" class="btn sm" id="liveBtn">Refresh live</button>${gm}`;
-      document.getElementById('liveBtn').addEventListener('click', () => { forceLive = true; explore(); });
+      renderChips(counts(snap.results)); renderPoiCols(st, full(snap.results));
       exploring = false; if (lastExplored !== state.stayId) explore(); return;
     }
     forceLive = false;
-    grid.innerHTML = '';
-    status.innerHTML = `Loading places within 5 miles (8 km) of ${esc(st.name)} from OpenStreetMap… (public servers; 10–60 s is normal)${gm}`;
-    const failed = await fetchLive(st, cats, () => { const r = current(); renderChips(counts(r)); renderPoiCols(st, Object.fromEntries(Object.entries(r).filter(([, v]) => v !== undefined))); });
+    renderChips(counts({})); renderPoiCols(st, full({}));   // the rated places need no network; the other categories show "Loading"
+    await fetchLive(st, cats, () => { const r = current(); renderChips(counts(r)); renderPoiCols(st, full(r)); });
     const r = current();
-    renderChips(counts(r)); renderPoiCols(st, Object.fromEntries(Object.entries(r).filter(([, v]) => v !== undefined)));
-    status.innerHTML = `Within 5 miles (8 km) of ${esc(st.name)}: ${esc(summary(r))}. Data © OpenStreetMap contributors.` +
-      (failed ? ` Some categories did not load (${esc(failed.message || failed)}). <button type="button" class="btn sm" id="retryBtn">Retry</button>` : '') + gm;
-    if (failed) document.getElementById('retryBtn').addEventListener('click', () => { cats.forEach(c => { if (cache.get(stayKey(st) + '|' + c) === null) cache.delete(stayKey(st) + '|' + c); }); explore(); });
+    renderChips(counts(r)); renderPoiCols(st, full(r));
     exploring = false; if (lastExplored !== state.stayId) explore();
   }
   function renderPoiCols(st, results) {
-    poiLayer.clearLayers();
     const grid = document.getElementById('poiGrid'), cols = [];
-    if (pois.length) {
-      const cur = pois.map(p => ({ ...p, dist: mi(st.lat, st.lng, p.lat, p.lng) })).sort((a, b) => a.dist - b.dist);
-      cols.push(`<div class="card poi-col"><h3><span style="color:var(--warning)">★</span>Curated with ratings</h3><ul>${cur.map(p => `<li><span class="nm"><a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${esc(p.name)}</a>${p.dist <= 5 ? '' : '<span class="tagi" style="color:var(--muted)">outside 5 mi / 8 km</span>'}</span><span class="dist">${kmTxt(p.dist)}</span><span class="sub">${esc(p.type)}${p.rating != null ? ` · ★ ${esc(p.rating)}${p.rating_scale ? '/' + esc(p.rating_scale) : ''}${p.rating_source ? ' · ' + esc(p.rating_source) : ''}` : ''}${p.note ? ' · ' + esc(p.note) : ''}</span></li>`).join('')}</ul></div>`);
+    if (trip.arrival_airport && trip.arrival_airport.lat != null) cols.push('<div class="card poi-col aprcard" id="apRoute"></div>');
+    const curOther = pois.filter(p => !poiCat(p));
+    if (curOther.length) {
+      const cur = curOther.map(p => ({ ...p, dist: mi(st.lat, st.lng, p.lat, p.lng) })).sort((a, b) => a.dist - b.dist);
+      cols.push(`<div class="card poi-col"><h3><span style="color:var(--star)">★</span>Also useful</h3><ul>${cur.map(p => placeLI(p, 'other')).join('')}</ul></div>`);
     }
     Object.keys(POI_CATS).forEach(cat => {
-      if (!(cat in results)) return;
+      if (!(cat in results)) {   // enabled but still loading from OpenStreetMap
+        if (state.cats.has(cat) && !curatedCats.has(cat)) { const c0 = POI_CATS[cat]; cols.push(`<div class="card poi-col" data-cat="${cat}"><h3><span style="color:${c0.color}">${c0.icon}</span>${esc(c0.label)}</h3><div class="small muted" style="padding:2px 14px 14px">Loading from OpenStreetMap (10 to 60 s is normal)…</div></div>`); }
+        return;
+      }
       const c = POI_CATS[cat], list = results[cat];
-      if (list === null) { cols.push(`<div class="card poi-col"><h3><span style="color:${c.color}">${c.icon}</span>${esc(c.label)}</h3><ul><li><span class="sub">Could not load from OpenStreetMap right now. Use the Google Maps link above or Retry.</span></li></ul></div>`); return; }
-      list.slice(0, 60).forEach(p => {
-        const m = L.circleMarker([p.lat, p.lng], { radius: 6, color: '#fff', weight: 1.5, fillColor: c.color, fillOpacity: 0.9 });
-        m.bindPopup(`<strong>${esc(p.name || c.label)}</strong><br>${esc(c.label)} · ${kmTxt(p.dist)}${p.tags['addr:street'] ? '<br>' + esc([p.tags['addr:street'], p.tags['addr:housenumber']].filter(Boolean).join(' ')) : ''}${p.tags.opening_hours ? '<br>' + esc(p.tags.opening_hours) : ''}<br><a href="${gmaps(p.name, p.lat, p.lng)}" target="_blank" rel="noopener noreferrer">Open in Google Maps (ratings) ↗</a>${p.tags.website ? ` · <a href="${esc(p.tags.website)}" target="_blank" rel="noopener noreferrer">Website ↗</a>` : ''}`);
-        poiLayer.addLayer(m);
-      });
-      const li = p => `<li><span class="nm"><a href="${gmaps(p.name, p.lat, p.lng)}" target="_blank" rel="noopener noreferrer">${esc(p.name || '(unnamed)')}</a>${cat === 'hospital' && INTL.test(p.name + ' ' + (p.tags['operator:type'] || '') + ' ' + (p.tags.operator || '')) ? '<span class="tagi">private / intl</span>' : ''}${p.tags.emergency === 'yes' ? '<span class="tagi" style="color:var(--critical)">ER</span>' : ''}</span><span class="dist">${kmTxt(p.dist)}</span>${(p.tags['addr:street'] || p.tags.opening_hours) ? `<span class="sub">${esc([p.tags['addr:street'], p.tags.opening_hours].filter(Boolean).join(' · '))}</span>` : ''}</li>`;
+      if (curatedCats.has(cat) && Array.isArray(list)) {
+        const why = { hospital: 'Rated on Google Maps. The nearest few beyond 5 mi are listed too.', pharmacy: 'Big pharmacy chains only (3+ branches on the island), rated on Google Maps.', grocery: 'Big supermarket chains only (3+ branches on the island), rated on Google Maps.' }[cat];
+        cols.push(`<div class="card poi-col" data-cat="${cat}"><h3 title="${esc(why)}"><span style="color:${c.color}">${c.icon}</span>${esc(c.label)} <span class="muted small">${list.length}</span></h3><ul>${list.map(p => placeLI(p, cat)).join('') || '<li><span class="sub">None found.</span></li>'}</ul></div>`);
+        return;
+      }
+      if (list === null) { cols.push(`<div class="card poi-col" data-cat="${cat}"><h3><span style="color:${c.color}">${c.icon}</span>${esc(c.label)}</h3><div class="small muted" style="padding:2px 14px 14px">Could not load from OpenStreetMap right now. <button type="button" class="btn sm" data-retry="${cat}">Retry</button></div></div>`); return; }
+      const li = p => `<li><span class="nm"><a href="${dirTo(p.name, p.lat, p.lng)}" target="_blank" rel="noopener noreferrer" title="Directions from your stay">${esc(p.name || '(unnamed)')}</a>${cat === 'hospital' && INTL.test(p.name + ' ' + (p.tags['operator:type'] || '') + ' ' + (p.tags.operator || '')) ? '<span class="tagi">private / intl</span>' : ''}${p.tags.emergency === 'yes' ? '<span class="tagi" style="color:var(--critical)">ER</span>' : ''}</span><span class="dist">${kmTxt(p.dist)}</span>${(p.tags['addr:street'] || p.tags.opening_hours) ? `<span class="sub">${esc([p.tags['addr:street'], p.tags.opening_hours].filter(Boolean).join(' · '))}</span>` : ''}</li>`;
       const first = list.slice(0, 10), rest = list.slice(10, 60);
       cols.push(`<div class="card poi-col" data-cat="${cat}"><h3><span style="color:${c.color}">${c.icon}</span>${esc(c.label)} <span class="muted small">${list.length}</span></h3><ul>${first.map(li).join('') || '<li><span class="sub">Nothing mapped within 5 miles (8 km).</span></li>'}</ul>${rest.length ? `<ul class="rest" hidden>${rest.map(li).join('')}</ul><button class="more" type="button">Show ${rest.length} more</button>` : ''}</div>`);
     });
     grid.innerHTML = cols.join('');
+    if (!routeState || routeState.st.id !== st.id) routeState = { st, km: st.airport_km != null ? st.airport_km : null, min: st.airport_drive_min != null ? st.airport_drive_min : null };
+    paintRouteCard();
+    grid.querySelectorAll('[data-retry]').forEach(b => b.addEventListener('click', () => { cache.delete(stayKey(st) + '|' + b.dataset.retry); explore(); }));
+    markScrollable(grid);
     grid.querySelectorAll('.poi-col .more').forEach(b => b.addEventListener('click', () => { const r = b.previousElementSibling; r.hidden = !r.hidden; b.textContent = r.hidden ? b.textContent.replace('Hide', 'Show') : b.textContent.replace('Show', 'Hide'); }));
   }
 
@@ -1635,11 +2167,11 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
   const COVERAGE_CATS = ['flights', 'lodging', 'car', 'activities'];
   const covLabel = { searched: '✓ searched', 'no-inventory': '– nothing for these dates', blocked: '⚠ blocked / form failed' };
   const coverage = DATA.coverage && typeof DATA.coverage === 'object' ? DATA.coverage : null;
-  const coverageHTML = coverage ? `<div><strong>Sources checked</strong></div><div class="covwrap"><table class="legend cov"><tr><th></th>${COVERAGE_CATS.map(c => `<th>${esc(c)}</th>`).join('')}</tr>${Object.entries(coverage).map(([v, cells]) => `<tr><td>${esc(v)}</td>${COVERAGE_CATS.map(c => `<td>${cells && cells[c] ? esc(covLabel[cells[c]] || cells[c]) : '<span class="muted">n/a</span>'}</td>`).join('')}</tr>`).join('')}</table></div>` : '';
-  document.getElementById('foot').innerHTML = coverageHTML +
+  const coverageHTML = coverage ? `<div class="covwrap"><table class="legend cov"><tr><th></th>${COVERAGE_CATS.map(c => `<th>${esc(c)}</th>`).join('')}</tr>${Object.entries(coverage).map(([v, cells]) => `<tr><td>${esc(v)}</td>${COVERAGE_CATS.map(c => `<td>${cells && cells[c] ? esc(covLabel[cells[c]] || cells[c]) : '<span class="muted">n/a</span>'}</td>`).join('')}</tr>`).join('')}</table></div>` : '';
+  document.getElementById('foot').innerHTML = '<details class="srcs" id="srcs"><summary>Sources checked</summary><div class="srcbody">' + coverageHTML +
     `<div>Prices were captured on ${fmtDate(trip.generated_at)} and change constantly; the links open the live page so you can confirm before booking. Lines marked ≈ were estimated rather than read on the vendor's page.</div>` +
     `<div>Sources: ${providers.map(esc).join(', ')}. Map data and tiles © OpenStreetMap contributors (Overpass API). Nothing on this page books or charges anything.</div>` +
-    (trip.notes ? `<div>Notes: ${esc(trip.notes)}</div>` : '');
+    (trip.notes ? `<div>Notes: ${esc(trip.notes)}</div>` : '') + '</div></details>';
 
   // ---- entry requirements banner (visa, vaccines, arrival forms) ------
   function renderEntry() {
@@ -1723,7 +2255,7 @@ footer { margin: 32px 0 40px; padding-top: 16px; border-top: 1px solid var(--bor
   renderWeather();
   renderAll();
   renderMaster();
-  initMap();
+  initNearby();
 })();
 </script>
 </body>

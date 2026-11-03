@@ -467,7 +467,9 @@ def build_html(T, summary_md=None):
 
     html.append(f'<div style="font-size:12px;line-height:1.55;color:{C["muted"]};padding:4px 6px 20px">'
                 f'<b style="color:{C["text2"]}">Open the full dashboard:</b> save the attached <b>.html</b> file and double-click it. It works in any browser: '
-                f'tier tabs, a checkbox on every flight, stay, car and activity, the Master Search List and the map. '
+                f'tier tabs, a checkbox on every flight, stay, car and activity, and the Master Search List. '
+                f'<b style="color:{C["text2"]}">On a phone:</b> tap the attached <b>.html</b> file and choose <b>Open in Chrome</b> (Android) or <b>Save to Files</b>, then open it in Safari (iPhone). '
+                f'It turns into an app-style view with a bar of tabs along the bottom (Trip, Fly &amp; stay, Transport, Food, Activities, Essentials); the preview built into an email app cannot run it. '
                 f'The attached <b>.json</b> is the data behind it, for rebuilding or editing the trip later.</div>')
 
     return (f'<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -491,7 +493,7 @@ def build_text(T, summary_md=None):
     lines.append("")
     if summary_md:
         lines += [summary_md.strip(), ""]
-    lines.append("Open the attached .html dashboard in any browser for every option, link and the map.")
+    lines.append("Open the attached .html dashboard in any browser for every option and link. On a phone, open it in Chrome (Android) or Safari (iPhone, save to Files first): it shows a bottom tab bar.")
     return "\n".join(lines)
 
 

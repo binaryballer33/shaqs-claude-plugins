@@ -165,6 +165,13 @@ reload loops.
 Record the rung that worked in each item's `details` ("opened through the user's Chrome") so
 the user knows which prices came from their own profile.
 
+## 4c-2. Chrome tab groups
+
+One group per category, named `travel planner flights`, `travel planner lodging`, `travel planner transportation`,
+`travel planner activities`, `travel planner foodie`, `travel planner other essentials` (what goes in each: SKILL.md
+"Chrome tab groups"). Put each helper's tabs in its category's group and have it close them when done. If the tab
+tools have no way to name a group, say so and keep the category's tabs together.
+
 ## 4d. Order of work
 
 Follow the seven stages in SKILL.md ("Search order"): flights (with every details panel opened),
@@ -207,6 +214,8 @@ restaurants, then the map places. Rebuild and send after each stage.
   central stays with a live price: the cheapest well-rated hostel for budget, a big-review 3★ for mid,
   a boutique 4★ for upper, a luxury brand for luxury.
 
+- **Amenities:** every stay must have air conditioning and wifi; switch both site filters on first and record `amenities` (SKILL.md "Every stay must have air conditioning and wifi").
+- **Stay mix:** about 70% of the stays you list must be an entire place to yourself, the other 30% private rooms plus the best Hostelworld hostels (SKILL.md "Stay mix"). Open each site's entire-place / apartment / villa filter before anything else.
 - Read the ratings (Booking score out of 10, Airbnb/Agoda out of 5, Hostelworld out of 10) and
   review counts; a 9.4 with 40 reviews is weaker evidence than an 8.9 with 2,000. Prefer well-reviewed
   places; the user's trust in the dashboard depends on the options being ones they would pick.
@@ -228,6 +237,26 @@ restaurants, then the map places. Rebuild and send after each stage.
   generic name ("4-star hotel in Chiado, choose on Booking.com"), and `verified: false`.
 - When a provider blocked you, record that in the trip JSON `trip.notes` and in your closing message,
   with the rung of the §4c ladder it failed at and which browser finally read the price.
+
+## 7a. What goes in `details`
+
+`details` is shown on the traveler's card, so write what helps them choose (times, what is included, caveats). Do not
+write bookkeeping such as "Airbnb, Patong, read in your Chrome." or which browser read the price: that goes in the
+file's `notes` and `trip.notes`. `build_dashboard.py` strips "... read in your Chrome" sentences as a safety net.
+
+Rental cars: `details` and `price_note` hold the car only (class, seats, bags, gearbox, pick-up type such as in
+terminal or meet & greet, mileage, cancellation, deposit when shown). Leave out the searched dates and times, the
+driver age used, how many results the list had, what the results list did not show, logos, URLs and broker
+remarks: `build_dashboard.py` (`clean_car_text`) drops sentences like those.
+
+## 7b. Google Maps links
+
+Never hand-build `https://www.google.com/maps/place/NAME/@lat,lng,17z`: without Google's place id (the `data=!...`
+part) it cannot resolve the name and opens a blank `place//@lat,lng` page with no pin. Use
+`https://www.google.com/maps/search/?api=1&query=NAME+CITY` (it resolves to the real place card with rating and pin), or
+copy the full URL from the browser's address bar after the place card has loaded. `build_dashboard.py` rewrites
+any bare `maps/place/NAME/@...` link to the search form, but write the right one in the first place. Coordinates
+alone (`query=lat,lng`) only drop an unnamed pin: use them for unnamed map places, never for a named venue.
 
 ## 8. Fallback without a browser
 

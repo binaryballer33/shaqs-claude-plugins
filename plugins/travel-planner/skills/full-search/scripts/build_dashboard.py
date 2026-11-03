@@ -11,6 +11,7 @@ estimate. Totals are printed per tier so they can be quoted in the chat summary.
 """
 import argparse
 import json
+import urllib.parse
 import re
 import os
 import sys
@@ -27,9 +28,10 @@ DEFAULT_CATEGORIES = [
     {"id": "lodging", "label": "Lodging"},
     {"id": "car", "label": "Rental car"},
     {"id": "transfer", "label": "Airport transfer"},
+    {"id": "return", "label": "Return to airport"},
     {"id": "activities", "label": "Activities & tours"},
     {"id": "food", "label": "Food & daily spend"},
-    {"id": "transport", "label": "Local transport"},
+    {"id": "transport", "label": "Daily Transportation Spend Estimate"},
     {"id": "sim", "label": "SIM & mobile data"},
     {"id": "insurance", "label": "Insurance & fees"},
     {"id": "other", "label": "Other"},
@@ -184,9 +186,9 @@ def validate(data, rep: Report):
         elif not it["verified"] and not it.get("source"):
             rep.warn(f"{where}: estimate without a 'source' (where did the number come from?)")
         if it.get("category") == "lodging" and (it.get("lat") is None or it.get("lng") is None):
-            rep.warn(f"{where}: lodging without lat/lng will not appear on the map")
+            rep.warn(f"{where}: lodging without lat/lng has no distances or nearby-places cards")
         elif it.get("category") == "lodging" and iid not in (data.get("nearby") or {}):
-            rep.warn(f"{where}: no embedded 5-mile places; run scripts/fetch_pois.py so the map does not depend on live Overpass servers")
+            rep.warn(f"{where}: no embedded 5-mile places; run scripts/fetch_pois.py so the nearby-places cards do not depend on live Overpass servers")
         qty = it.get("qty")
         if qty is None:
             qty = {"per_person": travelers, "per_night": nights, "per_day": days,
@@ -260,6 +262,9 @@ def validate(data, rep: Report):
                 rep.error(f"{where}: {f} is required")
         if p.get("type") not in POI_TYPES:
             rep.error(f"{where}: type {p.get('type')!r} not in {sorted(POI_TYPES)}")
+    for i, p in enumerate(pois):
+        if p.get("type") in ("hospital", "pharmacy", "grocery") and p.get("rating") is not None and p.get("reviews") in (None, ""):
+            rep.warn(f"pois[{i}] ({p.get('name', '?')}): rating without a review count; the cards show 'rating · N reviews' for every place, so read the count on the Google Maps page")
     if not any(p.get("type") == "hospital" for p in pois):
         rep.warn("no curated hospital in 'pois'; add 2-3 top-rated international/private hospitals with ratings")
 
@@ -331,6 +336,8 @@ def validate(data, rep: Report):
         if missing:
             rep.warn(f"{cat}: {len(missing)} line(s) without a rating/reviews ({', '.join(map(str, missing[:4]))}{'…' if len(missing) > 4 else ''}); "
                      f"read the rating and review count for every {what} off the results page (rating, rating_scale, reviews), or set rating_source saying none exists")
+    if not any(isinstance(it, dict) and it.get("category") == "transport" for it in items) and any(isinstance(it, dict) and it.get("category") == "lodging" for it in items):
+        rep.warn("no 'transport' lines: add the Local transport per day lines (one ticked per tier: transit pass, rideshares, private driver; see tiers.md)")
     if not any(isinstance(it, dict) and it.get("category") == "transfer" for it in items):
         rep.warn("no 'transfer' items: price the ride from the arrival airport to each tier's default stay "
                  "(Uber's estimate first; where Uber does not operate, Grab/Bolt/local apps, the airport taxi counter, bus, pre-booked transfer)")
@@ -348,7 +355,7 @@ def validate(data, rep: Report):
     if ap is not None and (not isinstance(ap, dict) or ap.get("lat") is None or ap.get("lng") is None):
         rep.error("trip.arrival_airport needs {name, iata, lat, lng}")
     elif ap is None:
-        rep.warn("no trip.arrival_airport {name, iata, lat, lng}: the map cannot show ride and directions links from the airport")
+        rep.warn("no trip.arrival_airport {name, iata, lat, lng}: the airport-to-stay card cannot show ride and directions links")
 
     w = data.get("weather")
     if w is None:
@@ -383,12 +390,17 @@ def validate(data, rep: Report):
                 continue
             nb_ids.add(n["id"])
             if n.get("lat") is None or n.get("lng") is None:
-                rep.warn(f"{where}: no lat/lng, so the map cannot outline it")
+                rep.warn(f"{where}: no lat/lng, so its stays cannot be matched to it by distance")
             if not (n.get("nightlife") or n.get("food")):
                 rep.warn(f"{where}: say what the nightlife and food are like")
             if not str(n.get("source_url", "")).startswith("http"):
                 rep.warn(f"{where}: no source_url (Wikivoyage district page, tourism board or a city guide)")
         lodg = [it for it in items if isinstance(it, dict) and it.get("category") == "lodging"]
+        check_stay_mix(rep, lodg, nbs)
+        lacking = [it for it in lodg if not ((it.get("amenities") or {}).get("air_conditioning") is True and (it.get("amenities") or {}).get("wifi") is True)]
+        if lacking:
+            rep.warn(f"lodging: {len(lacking)} of {len(lodg)} stays do not record amenities {{air_conditioning: true, wifi: true}}; every stay must have air "
+                     "conditioning and wifi (turn both site filters on, read them off the listing, and drop a stay that lacks either)")
         for it in lodg:
             if it.get("neighborhood") and it["neighborhood"] not in nb_ids:
                 rep.warn(f"lodging {it.get('id')}: neighborhood '{it['neighborhood']}' is not in neighborhoods")
@@ -622,7 +634,181 @@ def weekday_everything(data):
         rs["note"] = add_weekdays(rs["note"], year)
 
 
+_GM_PLACE = re.compile(r"^https://(?:www\.)?google\.com/maps/place/([^/@?]+)/@-?[\d.]+,-?[\d.]+,[\d.]+z/?$")
+
+
+def fix_gmaps_links(obj, city=""):
+    """Rewrite hand-built Google Maps links of the form maps/place/NAME/@lat,lng,17z.
+
+    Without Google's place id (the data=!... part) Google cannot resolve the place from the name in the path
+    and lands on a blank "place//@lat,lng" page. A search-by-name link resolves the real place card.
+    Returns how many links were rewritten.
+    """
+    n = 0
+    if isinstance(obj, dict):
+        items = obj.items()
+    elif isinstance(obj, list):
+        items = enumerate(obj)
+    else:
+        return 0
+    for k, v in list(items):
+        if isinstance(v, str):
+            m = _GM_PLACE.match(v)
+            if m:
+                name = urllib.parse.unquote_plus(m.group(1)).strip()
+                q = name if (not city or city.lower() in name.lower()) else f"{name} {city}"
+                obj[k] = "https://www.google.com/maps/search/?api=1&query=" + urllib.parse.quote_plus(q)
+                n += 1
+        else:
+            n += fix_gmaps_links(v, city)
+    return n
+
+
+_PROVENANCE = [
+    re.compile(r"(?:[\w.]+(?: [\w.]+)?, )[\w &/'()-]+, read in (?:your|the user's|user's) (?:own )?Chrome\.?\s*", re.I),
+    re.compile(r"[^.\n]*\bread in (?:your|the user's|user's) (?:own )?Chrome\b[^.\n]*\.?\s*", re.I),
+]
+
+
+_POI_META = re.compile(r"\s*(?:\(?\b(?:read|checked|rating read|read on google maps)\b[^.\n]{0,40}\b20\d\d\)?\.?|[^.\n]*\bread in (?:your|the user's) (?:own )?chrome\b[^.\n]*\.?)", re.I)
+
+
+def clean_poi_notes(data):
+    """Map places show what the place is, not when Claude read its page."""
+    n = 0
+    for p in data.get("pois", []) or []:
+        v = p.get("note")
+        if isinstance(v, str):
+            nv = re.sub(r"\s{2,}", " ", _POI_META.sub("", v)).strip(" ;,")
+            if nv != v:
+                p["note"] = nv
+                n += 1
+    return n
+
+
+def strip_provenance(data):
+    """Drop 'Airbnb, Patong, read in your Chrome.' style bookkeeping from item text: it says where Claude read a
+    price, not anything the traveler needs on the card."""
+    n = 0
+    for it in data.get("items", []):
+        for k in ("details", "price_note"):
+            v = it.get(k)
+            if not isinstance(v, str):
+                continue
+            o = v
+            for rx in _PROVENANCE:
+                v = rx.sub("", v)
+            v = re.sub(r"\s{2,}", " ", v).strip()
+            if v != o:
+                n += 1
+                if v:
+                    it[k] = v
+                else:
+                    it.pop(k, None)
+    return n
+
+
+_CAR_META = re.compile(
+    r"pick-?up (?:mon|tue|wed|thu|fri|sat|sun)|drop-?off|driver(?:'s)? age|chrome|results? (?:list|page)|\bresults\b|"
+    r"card shows|logo|\burl\b|bot check|showed no|lists the broker|list shows|session|converted|not shown|not opened|"
+    r"was not|were not|\bread\b|opened|cheapest of|deals from|the form|default|engine|\btick|as shown|"
+    r"in usd|7-day total|total in|per-day rate|fares run|same \d+ cars|'important info'|important info|"
+    r"model not shown|rental company is not named|brand name|was set|selector|variants|shows \$|plushest|listed\b|matched|in the list|other brokers|where noted|unless noted|exclusive \d+% off",
+    re.I)
+
+
+def clean_car_text(data):
+    """Rental-car cards show the car, not the research: keep seats, bags, gearbox, mileage, cancellation and pick-up
+    type; drop which dates were searched, what the results list did or did not show, and how the page was read."""
+    n = 0
+    for it in data.get("items", []):
+        if it.get("category") != "car":
+            continue
+        for k in ("details", "price_note"):
+            v = it.get(k)
+            if not isinstance(v, str) or not v.strip():
+                continue
+            v0 = re.sub(r"\b(incl|approx|e\.g|i\.e|vs)\.", r"\1", v.strip())
+            parts = re.split(r"(?<=[.;])\s+|;\s*", v0)
+            keep = [x.strip().rstrip(";") for x in parts if x.strip() and not _CAR_META.search(x)]
+            keep = [x[0].upper() + x[1:] for x in keep if x.strip(" .")]
+            nv = " ".join(x if x.endswith(".") else x + "." for x in keep).strip()
+            nv = re.sub(r"\s{2,}", " ", nv)
+            if nv != v:
+                n += 1
+                if nv:
+                    it[k] = nv
+                else:
+                    it.pop(k, None)
+        if it.get("rating") is None and it.get("rating_source"):
+            it["rating_source"] = f"not rated on {it.get('provider', 'this site')}"
+    return n
+
+
+def check_stay_mix(rep, lodg, nbs):
+    """User's standing instruction (Nov 2 2026): about 70% of the stays are an entire place to yourself (apartment,
+    condo, villa, house, studio); the other 30% are private rooms (hotel rooms included) and only the best hostels
+    on Hostelworld. Warns, never fails, so an existing dashboard still builds."""
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from pick_custom_stay import stay_type
+    except Exception:
+        return
+    kind = lambda it: it.get("stay_type") or stay_type(it)
+    if len(lodg) < 10:
+        return
+    ent = [it for it in lodg if kind(it) == "entire"]
+    share = len(ent) / len(lodg)
+    if share < 0.70:
+        host = sum(1 for it in lodg if kind(it) == "hostel")
+        rep.warn(f"lodging mix: only {len(ent)} of {len(lodg)} stays ({share:.0%}) are an entire place to yourself; the user wants 70% "
+                 f"(the other 30%: private rooms and the best Hostelworld hostels; now {host} hostel lines). Search each site's "
+                 "'entire home / apartment / villa' filter first (see SKILL.md 'Stay mix')")
+    for n in nbs:
+        if not n.get("id") or n.get("search_stays") is False:
+            continue
+        here = [it for it in lodg if it.get("neighborhood") == n["id"]]
+        if len(here) >= 5:
+            s = sum(1 for it in here if kind(it) == "entire") / len(here)
+            if s < 0.70:
+                rep.warn(f"lodging mix in {n.get('name', n['id'])}: {s:.0%} entire places ({sum(1 for it in here if kind(it) == 'entire')} of {len(here)}); the target is 70%")
+    weak = []
+    for it in lodg:
+        if kind(it) != "hostel":
+            continue
+        try:
+            r = float(it.get("rating")) / float(it.get("rating_scale") or 10)
+            n_rev = float(str(it.get("reviews") or 0).replace(",", "").replace("+", ""))
+        except (TypeError, ValueError):
+            r, n_rev = 0.0, 0.0
+        if r < 0.85 or n_rev < 100:
+            weak.append(it.get("name", "?"))
+    if weak:
+        rep.warn(f"{len(weak)} hostel line(s) are not among the best on Hostelworld (8.5/10 or better, 100+ reviews): "
+                 + ", ".join(sorted(set(weak))[:5]) + (" ..." if len(set(weak)) > 5 else "") + "; keep only the top-rated hostels")
+
+
+def tag_stay_types(data):
+    """Lodging lines get stay_type: hostel | private | entire (the dashboard's Lodging filter)."""
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from pick_custom_stay import stay_type
+    except Exception:
+        return 0
+    n = 0
+    for it in data.get("items", []):
+        if it.get("category") == "lodging" and not it.get("stay_type"):
+            it["stay_type"] = stay_type(it)
+            n += 1
+    return n
+
+
 def build(data, template_path, out_path):
+    strip_provenance(data)
+    clean_poi_notes(data)
+    tag_stay_types(data)
+    clean_car_text(data)
+    fix_gmaps_links(data, (data.get("trip", {}).get("destination") or {}).get("city", ""))
     weekday_everything(data)
     with open(template_path, encoding="utf-8") as f:
         html = f.read()

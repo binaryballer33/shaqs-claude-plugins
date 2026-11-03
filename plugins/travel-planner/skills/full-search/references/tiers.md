@@ -23,6 +23,8 @@ Keep the categories consistent within a tier so the total means something.
 | Local transport | metro / bus pass | transit plus occasional rideshare | rideshare and taxis | private transfers |
 | Insurance | basic medical (e.g. SafetyWing) | standard trip insurance | comprehensive with cancellation | comprehensive plus premium medical evacuation |
 
+**Lodging mix (user's standing instruction, Nov 2 2026):** every tier is mostly entire places (about 70%): a budget studio, a mid-tier flat, an upper-tier serviced residence, a luxury pool villa. The remaining 30% are private rooms and only the best Hostelworld hostels. The table above says which kind of stay is typical for each tier; it does not mean a tier is filled with hotel rooms or hostels.
+
 ## Choosing tiers from what the site shows
 
 Fixed dollar thresholds fail across destinations. Use the price distribution on the results page

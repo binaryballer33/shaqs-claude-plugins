@@ -66,7 +66,8 @@ Field names are read by the template's JavaScript, so spell them exactly as belo
 | `rating_source` | string | no | when the rating is not the provider's own guest score: "Google Maps", "Trustpilot", "rental company's score on Booking.com", "Kayak deal score". With no `rating`, the reason none exists ("New Vrbo listing, no reviews yet"); the page shows "No rating · …" |
 | `rating_url` | url | no | the page the rating came from, when it is not `url` (the source name becomes a link) |
 | `neighborhood` | string | lodging | id of the tourist neighborhood this stay is in (`neighborhoods[].id`); drives the Lodging card's Area filter |
-| `lat`, `lng` | number | lodging | puts the stay on the map; omit for non-lodging |
+| `lat`, `lng` | number | lodging | the stay's position (distance to the airport and nearby places); omit for non-lodging |
+| `amenities` | `{ "air_conditioning": true, "wifi": true }` | lodging | both must be `true`, read from the listing; a stay without both is never listed |
 | `address` | string | no | shown in the map popup |
 | `alternatives` | array of `{ "provider", "url", "price" }` | no | the same stay/flight on other sites, shown as small links |
 
@@ -204,6 +205,8 @@ its menu or names it as a specialty. Not counted in the totals.
 | `type` | string | yes | `hospital`, `pharmacy`, `embassy`, `grocery`, `nightlife`, `nature`, `other` |
 | `lat`, `lng` | number | yes | |
 | `rating`, `rating_scale` | number | no | 4.4 / 5 |
+| `reviews` | integer | with `rating` for hospital / pharmacy / grocery | the Google Maps review count (480) |
+| `chain` | string | pharmacy / grocery | the chain name |
 | `rating_source` | string | no | "Google Maps", "Trip.com", "Tripadvisor"; with no `rating`, why none was found |
 | `rating_url` | url | no | the page the rating came from (Trip.com / Tripadvisor restaurant page) |
 | `url` | string | yes | the Google Maps page (or official site) used as the source |
@@ -211,6 +214,24 @@ its menu or names it as a specialty. Not counted in the totals.
 
 The dashboard shows curated pins in every tier, highlights the ones within 5 miles of the selected
 stay, and lists their distance.
+
+**Rated lists for hospitals, pharmacies and grocery (user's standing instruction, Nov 2 2026).** The map's
+Hospitals, Pharmacies and Grocery columns list only places from `pois[]`, never the unrated OpenStreetMap results (a
+kind with no `pois` entries falls back to OpenStreetMap). So for every trip:
+- **Hospitals:** the island's hospitals and 24 h-ER clinics, each with `rating`, `reviews` (the count), `er_24h`,
+  `intl`, `hours`.
+- **Pharmacies:** only big chains (3+ branches in the destination, known as reliable; for Phuket: Boots and Watsons),
+  every branch with 3.5+ stars and 20+ reviews on Google Maps. Add `chain`. Local groups with little evidence are left out.
+- **Groceries:** same rule for supermarket / hypermarket / cash-and-carry chains (not convenience stores). Add `chain`.
+- **Every place:** read `rating` and `reviews` on its own Google Maps page; the dashboard prints "★ 4.5/5 · 480 reviews".
+  Never estimate either number.
+- **Map place cards stay concise** (user's instruction, Nov 2 2026). Each shows only: name (with an "ER" tag for a 24 h
+  emergency room), Hours ("24 h" or "9 AM - 5 PM"), Distance (miles and km, plus a walking and a driving time),
+  Rating ("★ 2.3/5 · 620 reviews") and Tel. So every rated place needs `hours` and `tel` (a Google Maps phone number,
+  never guessed) besides `rating` and `reviews`; no notes or sources on the card. Stars are gold, review counts blue,
+  everywhere on the dashboard.
+Helpers write `info/poi_hospitals.json`, `info/poi_pharmacies.json`, `info/poi_grocery.json`; merge them into
+`pois` (see `scripts/poi_merge.py`).
 
 ## `nearby` — embedded 5-mile places (written by `scripts/fetch_pois.py`, do not hand-write)
 
@@ -283,7 +304,7 @@ on the map, and as the Lodging card's Area filter. Stays are searched in each on
 | `local_name` | string | no | name in the local script |
 | `lat`, `lng` | number | yes | centre of the area (the map draws a circle) |
 | `radius_m` | number | no | circle radius, default 700 |
-| `tags` | list | no | 2–3 short tags: "Nightlife", "Street food", "Beach" |
+| `tags` | list | no | 2–3 short tags: "Nightlife", "Street food", "Beach". The exact tag "Nightlife" marks a real bar/club district; the Custom tab's stay is picked from those (`scripts/pick_custom_stay.py`) |
 | `summary` | string | no | one line on what the area is |
 | `nightlife` | string | yes* | what the bars/clubs/live music are like (*nightlife or food required) |
 | `food` | string | yes* | what to eat there and where |
