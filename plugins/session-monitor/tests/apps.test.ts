@@ -12,6 +12,7 @@ import {
   toWindowsPath,
   trashName,
   windowsDefaultArgv,
+  windowsExplorerArgv,
   windowsOpenArgv,
   windowsTrashArgv,
 } from '../hooks/lib/apps'
@@ -88,8 +89,20 @@ describe('the same buttons on Windows', () => {
     expect(windowsOpenArgv('C:/repo/index.html', false, false)).toEqual(['cmd.exe', '/d', '/c', 'start', '', 'chrome', 'C:\\repo\\index.html'])
     expect(windowsOpenArgv('C:/repo/logo.png', false, false)).toEqual(windowsDefaultArgv('C:/repo/logo.png'))
     expect(windowsDefaultArgv("C:/repo/it's.png")[4]).toBe("Invoke-Item -LiteralPath 'C:\\repo\\it''s.png'")
-    expect(windowsOpenArgv('C:/repo/src', false, true)).toEqual(['explorer.exe', 'C:\\repo\\src'])
-    expect(windowsOpenArgv('C:/repo/app.py', true, false)).toEqual(['explorer.exe', '/select,C:\\repo\\app.py'])
+    expect(windowsOpenArgv('C:/repo/src', false, true)).toEqual(windowsExplorerArgv('C:/repo/src', false))
+    expect(windowsOpenArgv('C:/repo/app.py', true, false)).toEqual(windowsExplorerArgv('C:/repo/app.py', true))
+  })
+
+  test('Explorer is started by PowerShell, which quotes the path for it and brings its window to the front', () => {
+    const [exe, , , flag, script = ''] = windowsExplorerArgv("C:/my repo/it's.pdf", true)
+    expect([exe, flag]).toEqual(['powershell.exe', '-Command'])
+    expect(script).toContain("$p = 'C:\\my repo\\it''s.pdf'")
+    expect(script).toContain(`'/select,"' + $p + '"'`)
+    expect(script).toContain('SetForegroundWindow')
+    const folder = windowsExplorerArgv('C:/my repo', false)[4] ?? ''
+    expect(folder).toContain(`'"' + $p + '"'`)
+    expect(folder).toContain('$dir = $p')
+    expect(script).toContain('GetDirectoryName($p)')
   })
 
   test('the app a command chose is read back, and Explorer answering 1 is a success', () => {
@@ -121,6 +134,6 @@ describe('the same buttons on Windows', () => {
     expect(fromMsysPath('/d')).toBe('D:/')
     expect(fromMsysPath('C:/Users/me')).toBe('C:/Users/me')
     expect(fromMsysPath('/repo/src')).toBe('/repo/src')
-    expect(windowsOpenArgv(fromMsysPath('/c/Users/me/a.pdf'), true, false)).toEqual(['explorer.exe', '/select,C:\\Users\\me\\a.pdf'])
+    expect(windowsOpenArgv(fromMsysPath('/c/Users/me/a.pdf'), true, false)[4]).toContain("$p = 'C:\\Users\\me\\a.pdf'")
   })
 })

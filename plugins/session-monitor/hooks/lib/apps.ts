@@ -125,16 +125,41 @@ export const windowsDefaultArgv = (path: string): string[] => [
 ]
 
 /**
+ * Shows a path in File Explorer (`isSelect`: its folder with it selected; else
+ * the folder itself) and brings that window to the front. Explorer started
+ * by a background process opens behind the app, so the button seemed to do
+ * nothing: PowerShell finds the window once it is up and raises it. The path
+ * is quoted for Explorer too (`/select,"C:\a b\c.txt"`), which it needs.
+ */
+export const windowsExplorerArgv = (path: string, isSelect: boolean): string[] => {
+  const native = psQuote(toWindowsPath(path))
+  const script = [
+    `$p = ${native}`,
+    isSelect ? `Start-Process -FilePath explorer.exe -ArgumentList ('/select,"' + $p + '"')` : `Start-Process -FilePath explorer.exe -ArgumentList ('"' + $p + '"')`,
+    isSelect ? '$dir = [IO.Path]::GetDirectoryName($p)' : '$dir = $p',
+    `Add-Type -Namespace W -Name U -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h); [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c); [DllImport("user32.dll")] public static extern void keybd_event(byte k, byte s, uint f, UIntPtr e);'`,
+    '$shell = New-Object -ComObject Shell.Application',
+    'for ($i = 0; $i -lt 25; $i++) {',
+    '  Start-Sleep -Milliseconds 120',
+    '  $w = @($shell.Windows() | Where-Object { try { $_.Document.Folder.Self.Path -ieq $dir } catch { $false } }) | Select-Object -Last 1',
+    // A tap of Alt lets a background process take the foreground.
+    '  if ($w) { [W.U]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero); [W.U]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero); [W.U]::ShowWindow([IntPtr]$w.HWND, 9) | Out-Null; [W.U]::SetForegroundWindow([IntPtr]$w.HWND) | Out-Null; break }',
+    '}',
+  ].join('; ')
+  return ['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', script]
+}
+
+/**
  * The command line for a path on Windows: Explorer with it selected, a folder
  * in Explorer, a file in its app through `start`, else the app Windows picks.
  */
 export const windowsOpenArgv = (path: string, isReveal: boolean, isFolder: boolean): string[] => {
   const native = toWindowsPath(path)
   if (isReveal) {
-    return ['explorer.exe', `/select,${native}`]
+    return windowsExplorerArgv(path, true)
   }
   if (isFolder) {
-    return ['explorer.exe', native]
+    return windowsExplorerArgv(path, false)
   }
   const command = WINDOWS_COMMANDS[appFor(path)?.app ?? '']
   return command === undefined ? windowsDefaultArgv(path) : ['cmd.exe', '/d', '/c', 'start', '', command, native]
