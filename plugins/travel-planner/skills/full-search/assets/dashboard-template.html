@@ -733,6 +733,35 @@ body.m .fcard .tl > .pt.end { grid-column: 2; grid-row: 1; }
 body.m .fcard .tl > .mid { grid-column: 1 / -1; grid-row: 2; min-width: 0; }
 body.m .fcard .tl .mid .route .stopm small { white-space: normal; }
 @media print { #bnav, #mtop { display: none !important; } }
+
+/* ---- user round Nov 4 2026: neighborhoods scroll sideways and show open; weather tab; mini weather ---- */
+#weather.g-off, #mapSection.g-off { display: none !important; }
+.card.weather { max-height: none; overflow: visible; margin-top: 4px; }
+.card.weather .vhint { display: none !important; }
+.nb-fold .nbrow { margin: 0 0 4px; }
+.nb-fold .nbrow > .nb-grid { display: flex; gap: 12px; padding: 4px 14px 14px; max-height: none; overflow-x: auto; overflow-y: hidden; align-items: flex-start; scroll-snap-type: x proximity; scroll-padding-left: 14px;
+  scrollbar-width: auto; scrollbar-color: var(--accent) var(--surface); }
+.nb-fold .nbrow > .nb-grid::-webkit-scrollbar { display: block; height: 12px; }
+.nb-fold .nbrow > .nb-grid::-webkit-scrollbar-track { background: var(--surface); border-radius: 6px; }
+.nb-fold .nbrow > .nb-grid::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 6px; border: 2px solid var(--surface); }
+.nb-fold .nb { flex: 0 0 min(330px, 84%); scroll-snap-align: start; max-height: 560px; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--accent) var(--surface-2); }
+.nb-fold .nb img { width: 100%; height: 170px; object-fit: cover; border-radius: 8px; }
+.nbrow .fade { bottom: 12px; width: 70px; }
+.nbrow .fade.l { background: linear-gradient(90deg, var(--surface-2) 25%, transparent); }
+.nbrow .fade.r { background: linear-gradient(270deg, var(--surface-2) 25%, transparent); }
+.nbrow .scr { top: 42%; width: 38px; height: 38px; font-size: 22px; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+.nbrow .scr.r { width: auto; min-width: 38px; }
+.nb-note .nb-swipe { color: var(--accent); }
+#card-lodging.nb-open { height: 1340px; }
+.cat-card.nb-open { height: 1100px; }
+.miniwx { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 4px; }
+.miniwx .mw { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 2px 4px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface-2); min-width: 0; text-align: center; }
+.miniwx .mw.nf { border-style: dashed; background: var(--surface); }
+.miniwx .mwd { font-size: 10.5px; font-weight: 650; color: var(--text-2); white-space: nowrap; }
+.miniwx .mwi { font-size: 20px; line-height: 1.15; }
+.miniwx .mwh { font-size: 13px; color: var(--text); }
+.miniwx .mwl { font-size: 11px; color: var(--muted); min-height: 13px; }
+.side .mwnote { margin: 0 0 6px; font-size: 11px; }
 </style>
 </head>
 <body>
@@ -900,7 +929,7 @@ body.m .fcard .tl .mid .route .stopm small { white-space: normal; }
   const tierLabel = id => (TIERS.find(t => t.id === id) || {}).label || id;
 
   // ---- state -----------------------------------------------------------
-  const state = { rtKind: 'all', rtSort: 'price', stayType: 'all', bagCarry: false, bagChecked: false, airport: 'all', group: 'fl', tier: 'custom', checked: {}, customInit: false, stayId: null, customLoc: null,
+  const state = { rtKind: 'all', rtSort: 'price', stayType: 'all', bagCarry: false, bagChecked: false, airport: 'all', group: 'fl', nbOpen: true, tier: 'custom', checked: {}, customInit: false, stayId: null, customLoc: null,
                   cats: new Set(['hospital','pharmacy','grocery']), sort: 'price_asc', vendorTab: {}, tierTab: {}, areaTab: {}, modeTab: {}, dish: 'all', selOpen: true, mCap: {}, mSig: {} };
   const store = {
     load() { try { const s = JSON.parse(localStorage.getItem(KEY) || '{}'); if (s.dataSig !== DATA_SIG) { delete s.checked; delete s.customInit; delete s.customRule; } ['checked','customInit','customRule','customLoc','sort'].forEach(k => { if (s[k] !== undefined) state[k] = s[k]; }); if (s.mapCats) state.cats = new Set(s.mapCats); } catch (e) {} },
@@ -1124,14 +1153,23 @@ body.m .fcard .tl .mid .route .stopm small { white-space: normal; }
     });
   }
   let _msT; addEventListener('resize', () => { clearTimeout(_msT); _msT = setTimeout(() => markScrollable(document), 200); });
+  const WX_GROUP = { id: 'wx', label: 'Weather', cats: [] };   // not in TAB_GROUPS: unknown categories fall back to the last group there
   function applyGroups(el) {
     const cards = [...el.querySelectorAll('.cat-card[data-cat]')];
     cards.forEach(c => { c.dataset.group = groupOf(c.dataset.cat); if (!['ground', 'daytrips'].includes(c.dataset.cat)) c.classList.add('wide'); });
     const has = TAB_GROUPS.filter(g => cards.some(c => c.dataset.group === g.id));
-    if (!has.some(g => g.id === state.group)) state.group = (has[0] || TAB_GROUPS[0]).id;
+    const hasWx = !!DATA.weather;
+    const tabs = hasWx ? has.concat(WX_GROUP) : has;
+    if (MQ.matches && state.group === 'wx') state.group = (has[0] || TAB_GROUPS[0]).id;   // phone: weather lives on the Essentials screen
+    if (!tabs.some(g => g.id === state.group)) state.group = (has[0] || TAB_GROUPS[0]).id;
     cards.forEach(c => c.classList.toggle('g-off', c.dataset.group !== state.group));
+    if (!MQ.matches) {   // desktop: Weather is its own tab; "What's near your stay" sits inside the Flights & Lodging tab
+      const wxEl = document.getElementById('weather'), mapEl = document.getElementById('mapSection');
+      if (wxEl) wxEl.classList.toggle('g-off', state.group !== 'wx');
+      if (mapEl) mapEl.classList.toggle('g-off', state.group !== 'fl');
+    }
     const nav = document.getElementById('gtabs');
-    nav.innerHTML = has.map(g => `<button type="button" role="tab" data-group="${g.id}" aria-selected="${g.id === state.group}">${esc(g.label)}<span class="n">${cards.filter(c => c.dataset.group === g.id).length}</span></button>`).join('');
+    nav.innerHTML = tabs.map(g => `<button type="button" role="tab" data-group="${g.id}" aria-selected="${g.id === state.group}">${g.id === 'wx' ? '🌤️ ' : ''}${esc(g.label)}${g.id === 'wx' ? '' : `<span class="n">${cards.filter(c => c.dataset.group === g.id).length}</span>`}</button>`).join('');
     nav.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { state.group = b.dataset.group; applyGroups(el); }));
     markScrollable(el);
     mSync();
@@ -1178,6 +1216,8 @@ body.m .fcard .tl .mid .route .stopm small { white-space: normal; }
     }, 40);
   }
   document.addEventListener('click', e => {   // in-page links to a card (e.g. "Compare rides") must open its tab first
+    const wl = e.target.closest && e.target.closest('a[href="#weather"], a[href="#mapSection"]');
+    if (wl && !MQ.matches) { const g = wl.getAttribute('href') === '#weather' ? 'wx' : 'fl'; if (state.group !== g) { state.group = g; applyGroups(document.getElementById('items')); } return; }
     const a = e.target.closest && e.target.closest('a[href^="#card-"]'); if (!a) return;
     const g = groupOf(a.getAttribute('href').slice(6));
     if (state.group !== g || (MQ.matches && mscr !== g)) { state.group = g; if (MQ.matches) mscr = g; applyGroups(document.getElementById('items')); }
@@ -1327,8 +1367,8 @@ body.m .fcard .tl .mid .route .stopm small { white-space: normal; }
     return `<details class="nb-fold"${state.nbOpen ? ' open' : ''}>
       <summary><span class="dot" style="background:#b0479a"></span><span class="nbt">Tourist neighborhoods: nightlife &amp; food</span>
         <span class="nbn">${NB.map(n => `<span>📍 ${esc(n.name)}</span>`).join('')}</span><span class="chev"></span></summary>
-      <div class="nb-grid" tabindex="0" aria-label="Neighborhoods">${NB.map(tile).join('')}</div>
-      <div class="nb-note">Each area links to a map and a guide. "Show stays here" filters the stays below to that area.</div></details>`;
+      <div class="chiprow nbrow"><div class="chips nb-grid" tabindex="0" aria-label="Neighborhoods: scroll sideways for more">${NB.map(tile).join('')}</div><span class="fade l"></span><span class="fade r"></span><button type="button" class="scr l" aria-label="Scroll left">‹</button><button type="button" class="scr r" aria-label="Scroll right">›</button></div>
+      <div class="nb-note"><b class="nb-swipe">↔ Scroll sideways for more areas</b> (arrow buttons, swipe, or shift + mouse wheel). Each area links to a map and a guide. "Show stays here" filters the stays below to that area.</div></details>`;
   }
   // ---- buses, trains & metro (same-country trips), popular day trips, best restaurants: not in the totals ----
   const MODE_ICON = { shared: '🚐', taxi: '🚖', tuktuk: '🛺', private: '🚘', bus: '🚌', train: '🚆', metro: '🚇', brt: '🚍', tram: '🚊', ferry: '⛴️', card: '💳', car: '🚗', tour: '🧭', rideshare: '🚕', walk: '🚶' };
@@ -1445,7 +1485,7 @@ body.m .fcard .tl .mid .route .stopm small { white-space: normal; }
         const max = box.scrollWidth - box.clientWidth;
         row.classList.toggle('more-l', box.scrollLeft > 4);
         row.classList.toggle('more-r', box.scrollLeft < max - 4);
-        const n = [...box.querySelectorAll('.chip')].filter(c => c.offsetLeft + c.offsetWidth > box.scrollLeft + box.clientWidth + 2).length;
+        const n = [...box.querySelectorAll('.chip, .nb')].filter(c => c.offsetLeft + c.offsetWidth > box.scrollLeft + box.clientWidth + 2).length;
         const r = row.querySelector('.scr.r'); r.textContent = n ? '+' + n + ' ›' : '›'; r.setAttribute('aria-label', n ? `Scroll right: ${n} more` : 'Scroll right');
       }
       box.addEventListener('scroll', update, { passive: true });
@@ -1638,11 +1678,24 @@ body.m .fcard .tl .mid .route .stopm small { white-space: normal; }
     }
     // 3. rainy season
     const si = seasonInfo(), st = rainStats();
-    if (si || st) C.rain = `<div class="sc"><h3><span class="i">🌧️</span>Rainy season</h3>
+    const miniWx = () => {
+      const W = DATA.weather; if (!W) return '';
+      const fc = {}; (W.forecast || []).forEach(f => { fc[f.date] = f; });
+      const nm = {}; (W.normals || []).forEach(n => { nm[n.month] = n; });
+      const cells = tripDays().map(d => {
+        const f = fc[isoD(d)], n = nm[MONTHS_L[d.getMonth()]], w = f ? wx(f) : wxNormal(n);
+        const hi = f ? f.high_f : n && n.high_f, lo = f ? f.low_f : n && n.low_f;
+        const wd = d.toLocaleDateString(undefined, { weekday: 'short' }), full = d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+        return `<div class="mw${f ? '' : ' nf'}" title="${esc(full + ': ' + w.label + (hi != null ? ', ' + hi + '°/' + lo + '°F' : '') + (f ? '' : ' (normal for the month, no forecast yet)'))}"><span class="mwd">${esc(wd)} ${d.getDate()}</span><span class="mwi" aria-hidden="true">${w.icon}</span><b class="mwh">${hi != null ? esc(hi) + '°' : '–'}</b><span class="mwl">${lo != null ? esc(lo) + '°' : ''}</span></div>`;
+      }).join('');
+      return `<div class="miniwx" role="group" aria-label="Weather for each trip day">${cells}</div><div class="line mwnote">Solid days are forecasts; dashed days show the monthly normal. °F high / low.</div>`;
+    };
+    if (si || st || DATA.weather) C.rain = `<div class="sc"><h3><span class="i">🌤️</span>Weather &amp; rainy season</h3>
+      ${miniWx()}
       ${si ? `<div class="status ${si.level}">${si.level === 'good' ? '✓ No, you miss it' : si.level === 'bad' ? '⚠ Yes, your whole trip' : si.inWet ? `⚠ Partly: ${si.inWet} of ${tripDays().length} days` : si.text.includes('after') ? '⚠ Just after it ends' : '⚠ Just before it starts'}</div>
       <div class="row"><span>Rainy season</span><b>${esc(si.rs.label)}</b></div>${si.rs.peak ? `<div class="row"><span>Wettest</span><b>${esc(si.rs.peak)}</b></div>` : ''}` : ''}
       ${st ? `<div class="row"><span>Days likely to rain</span><b>≈ ${st.pct}% (${Math.round(st.expected)} of ${st.total})</b></div><div class="meter" aria-hidden="true"><i style="width:${st.pct}%"></i></div>` : ''}
-      ${link('#weather', 'Weather and forecast ↓')}</div>`;
+      ${link('#weather', 'Full weather and forecast →')}</div>`;
     // 4. calendar
     C.cal = calendarCard();
     // 5. custom trip
