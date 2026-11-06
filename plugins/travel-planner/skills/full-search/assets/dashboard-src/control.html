@@ -79,6 +79,15 @@ main { padding: 14px 20px 60px; }
 .row.on { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 6px 16px -12px rgba(0,0,0,.8); }
 :root[data-theme="light"] .row { box-shadow: 0 0 0 1px color-mix(in srgb, var(--border-strong) 60%, transparent), 0 6px 16px -14px rgba(15,23,42,.35); }
 .list { gap: 12px; }
+/* neighborhood colors: one per area, used on cards, pills, chips and the stay picker */
+.pill.area { --nbc: var(--c-lodging); background: color-mix(in srgb, var(--nbc) 18%, transparent); color: var(--nbc); border-color: color-mix(in srgb, var(--nbc) 45%, transparent); font-weight: 700; }
+.chip.nbchip { color: var(--nbc); border-color: color-mix(in srgb, var(--nbc) 50%, var(--border-strong)); background: color-mix(in srgb, var(--nbc) 10%, var(--surface-2)); } .chip.nbchip[aria-pressed="true"] { background: var(--nbc); border-color: var(--nbc); color: #0b1220; } .chip.nbchip[aria-pressed="true"] .n { color: #0b1220; }
+.nb-body h3 { color: var(--nbc); } .nb .nbdot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--nbc); margin-right: 8px; vertical-align: 1px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--nbc) 30%, transparent); } .nb { border-top: 3px solid var(--nbc); }
+.staysel { gap: 8px; } .staysel select.nbsel { border-color: var(--nbc); box-shadow: 0 0 0 1px color-mix(in srgb, var(--nbc) 40%, transparent); color: var(--text); } .staysel .pill.area { white-space: nowrap; }
+:root[data-theme="light"] .pill.area { background: color-mix(in srgb, var(--nbc) 16%, #fff); color: color-mix(in srgb, var(--nbc) 70%, #000); }
+.poi-grid { grid-template-columns: 1fr 1fr; } .poi-col { max-height: 420px; } @media (max-width: 760px) { .poi-grid { grid-template-columns: 1fr; } }
+.oside h3 { flex-wrap: nowrap; } .oside h3 .status.inh { margin: 0 0 0 auto; font-size: 10.5px; padding: 2px 8px; letter-spacing: 0; text-transform: none; white-space: nowrap; flex: 0 0 auto; }
+.keys { font-size: 10.5px; color: var(--muted); line-height: 1.6; } .keys kbd { display: inline-block; font-family: var(--mono); font-size: 10px; border: 1px solid var(--border-strong); border-radius: 4px; padding: 0 4px; background: var(--surface-2); color: var(--text-2); margin-right: 2px; }
 .row:hover, .nb:hover, .dtrip:hover, .poi-col:hover { background: color-mix(in srgb, var(--accent) 9%, var(--surface-2)); border-color: color-mix(in srgb, var(--accent) 70%, var(--border-strong)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 10px 24px -14px rgba(0,0,0,.9); transition: background .12s, border-color .12s, box-shadow .12s; }
 .row.on:hover { background: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); }
 :root[data-theme="light"] .row:hover, :root[data-theme="light"] .nb:hover, :root[data-theme="light"] .dtrip:hover { background: color-mix(in srgb, var(--accent) 8%, #fff); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent), 0 10px 24px -16px rgba(15,23,42,.45); }
@@ -102,7 +111,7 @@ main { padding: 14px 20px 60px; }
     <details class="rtiers" id="rtiers"><summary><h4>Price tier</h4><span class="cur" id="r-cur"></span><span class="chev" aria-hidden="true">⌄</span></summary><div id="r-tiers"></div></details>
     <div><h4>Workspace</h4><nav class="gnav" id="r-nav"></nav></div>
     <div class="oside" id="r-side"></div>
-    <div class="foot"><span id="r-foot"></span></div>
+    <div class="foot"><div class="keys" id="r-keys"></div><span id="r-foot"></span></div>
   </aside>
   <div class="work">
     <header class="topbar"><div class="tb1"><h1 id="t-title"></h1><div class="meta" id="t-meta"></div><span class="sp"></span><div class="total"><small id="t-tier"></small><b id="t-total"></b></div><button type="button" class="btn sm" id="themeBtn" title="Switch between light and dark">◐ Theme</button><button type="button" class="btn sm" data-act="copy">Copy</button></div>
@@ -163,6 +172,15 @@ main { padding: 14px 20px 60px; }
   }
   E.bind(document.body, paint);
   paint('init');
+  // keyboard shortcuts (ignored while typing in a field): F flights · A/L/S accommodation · T transportation · ⇧T things to do · ⇧F food · E essentials · W weather · ⇧S sources
+  const KEYS = [['f', false, 'fl'], ['a', false, 'st'], ['l', false, 'st'], ['s', false, 'st'], ['t', false, 'go'], ['t', true, 'ac'], ['f', true, 'fd'], ['e', false, 'es'], ['w', false, 'wx'], ['s', true, 'src']];
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target, tag = (t.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'select' || tag === 'textarea' || t.isContentEditable) return;
+    const k = KEYS.find(x => x[0] === e.key.toLowerCase() && x[1] === e.shiftKey); if (!k || !groups.some(g => g.id === k[2])) return;
+    e.preventDefault(); S.group = k[2]; E.store.save(); paint('group');
+  });
+  document.getElementById('r-keys').innerHTML = [['F', 'Flights'], ['A / L / S', 'Accommodation'], ['T', 'Transportation'], ['⇧T', 'Things to do'], ['⇧F', 'Food'], ['E', 'Essentials'], ['W', 'Weather'], ['⇧S', 'Sources']].map(([k, l]) => `<span><kbd>${k}</kbd>${l}</span>`).join(' · ');
   // partial builds (build_dashboard.py --partial / --map-pending): say what is still being researched and reload every minute
   (function pending() {
     const pend = E.trip.pending || []; if (!pend.length) return;

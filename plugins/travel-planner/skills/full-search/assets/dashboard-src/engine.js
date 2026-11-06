@@ -13,11 +13,15 @@ window.TripEngine = function (DATA, opts) {
     { id: 'transfer', label: 'Airport transfer', icon: '🚕' }, { id: 'return', label: 'Return to airport', icon: '🛫' }, { id: 'activities', label: 'Activities & tours', icon: '🎟️' },
     { id: 'food', label: 'Food & daily spend', icon: '🍜' }, { id: 'transport', label: 'Daily transport', icon: '🚇' }, { id: 'sim', label: 'SIM & mobile data', icon: '📶' },
     { id: 'insurance', label: 'Insurance', icon: '🛡️' }, { id: 'other', label: 'Visa & fees', icon: '🛂' }];
-  const CATS = (DATA.categories || CAT_DEFS).map(c => ({ ...(CAT_DEFS.find(d => d.id === c.id) || {}), ...c }));
+  const CATS = (DATA.categories || CAT_DEFS).map(c => ({ ...(CAT_DEFS.find(d => d.id === c.id) || {}), ...c })).map(c => c.id === 'lodging' ? { ...c, label: 'Accommodation' } : c);
   const catOf = id => CATS.find(c => c.id === id) || CAT_DEFS.find(c => c.id === id) || { id, label: id, icon: '•' };
   const items = (DATA.items || []).map(it => ({ ...it, tiers: it.tiers || (it.tier ? [it.tier] : []), default_on: it.default_on !== false }));
   const NB = (DATA.neighborhoods || []).filter(n => n && n.id && n.name);
   const nbName = id => (NB.find(n => n.id === id) || {}).name || id;
+  // one color per neighborhood, used wherever an area is named (cards, pills, chips, the stay picker)
+  const NB_PALETTE = ['#f472b6', '#fbbf24', '#4ade80', '#60a5fa', '#c084fc', '#2dd4bf', '#fb923c', '#22d3ee'];
+  const nbColor = id => { const i = NB.findIndex(n => n.id === id); return i < 0 ? '#94a3b8' : NB_PALETTE[i % NB_PALETTE.length]; };
+  const nbPill = id => id && NB.some(n => n.id === id) ? `<span class="pill area" style="--nbc:${nbColor(id)}">📍 ${esc(nbName(id))}</span>` : '';
   const pois = DATA.pois || [];
 
   // ---- dates, money, text ----
@@ -86,8 +90,8 @@ window.TripEngine = function (DATA, opts) {
   // ---- sections and groups (templates decide how to present them) ----
   const GROUPS = [
     { id: 'fl', label: 'Flights', icon: '✈️', secs: ['flights'] },
-    { id: 'st', label: 'Stays', icon: '🏨', secs: ['neighborhoods', 'lodging', 'nearby'] },
-    { id: 'go', label: 'Getting around', icon: '🚕', secs: ['transfer', 'return', 'car', 'transport', 'ground'] },
+    { id: 'st', label: 'Accommodation', icon: '🏨', secs: ['neighborhoods', 'lodging', 'nearby'] },
+    { id: 'go', label: 'Transportation', icon: '🚕', secs: ['transfer', 'return', 'car', 'transport', 'ground'] },
     { id: 'ac', label: 'Things to do', icon: '🎟️', secs: ['activities', 'daytrips'] },
     { id: 'fd', label: 'Food', icon: '🍜', secs: ['food', 'localfood', 'restaurants'] },
     { id: 'es', label: 'Essentials', icon: '🧳', secs: ['entry', 'other', 'sim', 'insurance', 'onward'] },
@@ -120,7 +124,7 @@ window.TripEngine = function (DATA, opts) {
   const badge = it => it.verified ? `<span class="badge live" title="Read on ${esc(it.provider)} ${it.checked_at ? 'on ' + fmtDate(it.checked_at) : ''}">Live${it.checked_at ? ' · ' + fmtDate(it.checked_at) : ''}</span>` : `<span class="badge est" title="${esc(it.source || 'Not read on the site')}">Estimate</span>`;
   const pill = (txt, cls) => `<span class="pill${cls ? ' ' + cls : ''}">${txt}</span>`;
   const cpill = t => { let h = 0; for (const ch of String(t).toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return pill(esc(t), 'tag tc' + (h % 8)); };   // a stable color per tag text
-  const chip = (label, n, pressed, data) => `<button type="button" class="chip" aria-pressed="${!!pressed}" ${Object.entries(data).map(([k, v]) => `data-${k}="${esc(v)}"`).join(' ')}>${label}${n != null ? `<span class="n">${n}</span>` : ''}</button>`;
+  const chip = (label, n, pressed, data, style) => `<button type="button" class="chip${style ? ' nbchip' : ''}" aria-pressed="${!!pressed}"${style ? ` style="${style}"` : ''} ${Object.entries(data).map(([k, v]) => `data-${k}="${esc(v)}"`).join(' ')}>${label}${n != null ? `<span class="n">${n}</span>` : ''}</button>`;
   const openBtn = it => `<a class="open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Open on ${esc(it.provider)}<span class="arr">↗</span></a>`;
   const tierPills = it => it.tiers.map(t => pill(esc((TIERS.find(x => x.id === t) || {}).short || t), 'tier t-' + t)).join('');
 
@@ -188,7 +192,7 @@ window.TripEngine = function (DATA, opts) {
       <label class="tick" for="${cid}"><input type="checkbox" id="${cid}" data-act="tick" data-id="${esc(it.id)}" ${on ? 'checked' : ''} aria-label="Include ${esc(it.name)}"><span class="box"></span></label>
       <div class="body">
         <div class="ttl"><label for="${cid}">${esc(it.name)}</label></div>
-        <div class="meta">${pill(esc(it.provider), 'prov')}${pill(st[1] + ' ' + st[2], 'stype')}${it.neighborhood && NB.length ? pill('📍 ' + esc(nbName(it.neighborhood)), 'area') : ''}${(it.tags || []).map(t => pill(esc(t), 'tag')).join('')}${tierPills(it)}</div>
+        <div class="meta">${pill(esc(it.provider), 'prov')}${pill(st[1] + ' ' + st[2], 'stype')}${nbPill(it.neighborhood)}${(it.tags || []).map(t => pill(esc(t), 'tag')).join('')}${tierPills(it)}</div>
         <div class="meta2">${rateHTML(it)}${am.air_conditioning ? pill('❄️ A/C', 'am') : ''}${am.wifi ? pill('📶 Wi-Fi', 'am') : ''}${it.airport_km != null ? pill(`✈️ ${Number(it.airport_km).toFixed(0)} km${it.airport_drive_min ? ' · ' + hm(it.airport_drive_min) : ''} from airport`, 'am') : ''}${it.room_type ? `<span class="muted">${esc(String(it.room_type).split(' (')[0])}</span>` : ''}</div>
         ${addr ? `<div class="addr">${esc(addr)}</div>` : ''}${altsHTML(it)}
       </div>
@@ -220,7 +224,7 @@ window.TripEngine = function (DATA, opts) {
       <label class="tick" for="${cid}"><input type="checkbox" id="${cid}" data-act="tick" data-id="${esc(it.id)}" ${on ? 'checked' : ''} aria-label="Include ${esc(it.name)}"><span class="box"></span></label>${pic}
       <div class="body">
         <div class="ttl"><span class="ico" aria-hidden="true">${it.mode ? (MODE_ICON[it.mode] || icon) : icon}</span><label for="${cid}">${esc(it.name)}</label>${hlb}</div>
-        <div class="meta">${pill(esc(it.provider), 'prov')}${it.duration_min ? pill('⏱ ' + hm(it.duration_min) + (it.duration_note ? '' : ' door to door'), 'tag') : ''}${it.mode && HL_CATS.has(it.category) ? pill(esc(MODE_LABEL[it.mode] || it.mode), 'tag') : ''}${it.neighborhood && NB.length ? pill('📍 ' + esc(nbName(it.neighborhood)), 'area') : ''}${(it.tags || []).map(t => pill(esc(t), 'tag')).join('')}${it.days ? pill(it.days + ' days', 'tag') : ''}${it.kind === 'local' ? pill('Local carrier', 'tag') : it.kind === 'esim' ? pill('eSIM', 'tag') : ''}${tierPills(it)}${rateHTML(it)}${it.address ? `<span class="muted">${esc(it.address)}</span>` : ''}</div>
+        <div class="meta">${pill(esc(it.provider), 'prov')}${it.duration_min ? pill('⏱ ' + hm(it.duration_min) + (it.duration_note ? '' : ' door to door'), 'tag') : ''}${it.mode && HL_CATS.has(it.category) ? pill(esc(MODE_LABEL[it.mode] || it.mode), 'tag') : ''}${nbPill(it.neighborhood)}${(it.tags || []).map(t => pill(esc(t), 'tag')).join('')}${it.days ? pill(it.days + ' days', 'tag') : ''}${it.kind === 'local' ? pill('Local carrier', 'tag') : it.kind === 'esim' ? pill('eSIM', 'tag') : ''}${tierPills(it)}${rateHTML(it)}${it.address ? `<span class="muted">${esc(it.address)}</span>` : ''}</div>
         ${it.price_note ? `<div class="note">${esc(it.price_note)}</div>` : ''}
         ${it.details ? `<details class="more"><summary>Details</summary><div class="dtl">${esc(it.details)}</div></details>` : ''}${altsHTML(it)}
       </div>
@@ -275,7 +279,7 @@ window.TripEngine = function (DATA, opts) {
     const sub = its.filter(it => isOn(tier, it)).reduce((s, it) => s + line(it), 0), nOn = its.filter(it => isOn(tier, it)).length;
     const D = { cat: catId, act: 'filter' };
     const rows = [];
-    if (areas.length) rows.push(`<div class="frow"><span class="flbl">Area</span>${chip('All', its.length, at === 'all', { ...D, key: 'area', val: 'all' })}${areas.map(a => chip('📍 ' + esc(a.name), a.n, at === a.id, { ...D, key: 'area', val: a.id })).join('')}</div>`);
+    if (areas.length) rows.push(`<div class="frow"><span class="flbl">Area</span>${chip('All', its.length, at === 'all', { ...D, key: 'area', val: 'all' })}${areas.map(a => chip('📍 ' + esc(a.name), a.n, at === a.id, { ...D, key: 'area', val: a.id }, a.id === '_other' ? '' : `--nbc:${nbColor(a.id)}`)).join('')}</div>`);
     const tierChips = chip('All tiers', base.length, tt === 'all', { ...D, key: 'tier', val: 'all' }) + REAL_TIERS.map(t => { const n = base.filter(it => it.tiers.includes(t.id)).length; return n ? chip(esc(t.label), n, tt === t.id, { ...D, key: 'tier', val: t.id }) : ''; }).join('');
     const areaBase = at === 'all' ? its : its.filter(it => (it.neighborhood || '_other') === at);
     const stChips = stOn ? `<span class="flbl">Type</span>` + chip('All', areaBase.length, stSel === 'all', { ...D, key: 'stype', val: 'all' }) + STAY_TYPES.map(([id, ic, lab]) => { const n = areaBase.filter(it => stypeOf(it) === id).length; return n ? chip(ic + ' ' + lab, n, stSel === id, { ...D, key: 'stype', val: id }) : ''; }).join('') : '';
@@ -305,7 +309,7 @@ window.TripEngine = function (DATA, opts) {
     const tile = n => { const here = st.filter(it => it.neighborhood === n.id), from = here.length ? Math.min(...here.map(it => line(it) / nights)) : null;
       const maps = n.maps_url || ('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(n.name + ', ' + trip.destination.city));
       const ph = n.image && n.image.thumb ? `<a class="nb-photo" href="${esc(n.image.page || n.image.full || n.image.thumb)}" target="_blank" rel="noopener noreferrer"><img src="${esc(n.image.thumb)}" alt="${esc(n.name)}" loading="lazy" referrerpolicy="no-referrer"></a>` : '<div class="nb-photo none"></div>';
-      return `<article class="nb" data-nb="${esc(n.id)}">${ph}<div class="nb-body"><h3>${esc(n.name)}${n.local_name ? `<span class="ln">${esc(n.local_name)}</span>` : ''}</h3>
+      return `<article class="nb" data-nb="${esc(n.id)}" style="--nbc:${nbColor(n.id)}">${ph}<div class="nb-body"><h3><span class="nbdot" aria-hidden="true"></span>${esc(n.name)}${n.local_name ? `<span class="ln">${esc(n.local_name)}</span>` : ''}</h3>
         <div class="tags">${(n.tags || []).map(cpill).join('')}</div>
         ${n.summary ? `<p class="sum">${esc(n.summary)}</p>` : ''}
         <div class="nb-text">${n.nightlife ? `<p><b>🍸 Nightlife</b> ${esc(n.nightlife)}</p>` : ''}${n.food ? `<p><b>🍜 Food</b> ${esc(n.food)}</p>` : ''}${n.good_to_know ? `<p><b>ℹ️</b> ${esc(n.good_to_know)}</p>` : ''}</div>
@@ -440,7 +444,8 @@ window.TripEngine = function (DATA, opts) {
     const optLabel = it => `${it.name}${it.neighborhood && NB.length ? ' (' + nbName(it.neighborhood) + ')' : ''}${isOn(state.tier, it) ? ' ✓' : ''}`;
     const byArea = NB.map(n => ({ n, its: list.filter(it => it.neighborhood === n.id) })).filter(g => g.its.length), rest = list.filter(it => !NB.some(n => n.id === it.neighborhood));
     const opt = it => `<option value="${esc(it.id)}"${st && it.id === st.id ? ' selected' : ''}>${esc(optLabel(it))}</option>`;
-    const sel = `<label class="staysel"><span>Around</span><select data-act="stay">${byArea.length ? byArea.map(g => `<optgroup label="${esc(g.n.name)}">${g.its.map(opt).join('')}</optgroup>`).join('') + (rest.length ? `<optgroup label="Elsewhere">${rest.map(opt).join('')}</optgroup>` : '') : list.map(opt).join('')}</select></label>`;
+    const selColor = st && st.neighborhood ? nbColor(st.neighborhood) : null;
+    const sel = `<label class="staysel"${selColor ? ` style="--nbc:${selColor}"` : ''}><span>Around</span><select data-act="stay"${selColor ? ' class="nbsel"' : ''}>${byArea.length ? byArea.map(g => `<optgroup label="${esc(g.n.name)}">${g.its.map(opt).join('')}</optgroup>`).join('') + (rest.length ? `<optgroup label="Elsewhere">${rest.map(opt).join('')}</optgroup>` : '') : list.map(opt).join('')}</select>${st ? nbPill(st.neighborhood) : ''}</label>`;
     const cats = Object.keys(POI_CATS);
     const chips = `<div class="frow">${cats.map(c => chip(POI_CATS[c].icon + ' ' + POI_CATS[c].label, null, state.poiCats.includes(c), { act: 'poicat', val: c })).join('')}</div>`;
     let body = '';
@@ -546,7 +551,7 @@ window.TripEngine = function (DATA, opts) {
     const C = [];
     const Ei = DATA.entry;
     if (Ei && Array.isArray(Ei.items)) { const req = Ei.items.filter(x => x.status === 'required');
-      C.push(`<div class="sc"><h3><span class="i">🛂</span>Entry: must-haves</h3>${req.length ? `<div class="status bad">⚠ ${req.length} required to enter</div><ul class="req">${req.map(x => `<li><strong>${esc(x.title)}</strong>${x.url ? ` <a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">↗</a>` : ''}</li>`).join('')}</ul>` : `<div class="status good">✓ Nothing required to enter</div><div class="line">${esc(Ei.headline || '')}</div>`}${link('entry', 'Full entry rules →')}</div>`); }
+      C.push(`<div class="sc"><h3><span class="i">🛂</span>Entry: must-haves${req.length ? `<span class="status bad inh" title="${req.length} required to enter">⚠ ${req.length} required</span>` : '<span class="status good inh">✓ Nothing required</span>'}</h3>${req.length ? `<ul class="req">${req.map(x => `<li><strong>${esc(x.title)}</strong>${x.url ? ` <a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">↗</a>` : ''}</li>`).join('')}</ul>` : `<div class="line">${esc(Ei.headline || '')}</div>`}${link('entry', 'Full entry rules →')}</div>`); }
     const fx = trip.fx;
     if (fx && fx.rate && !skip.has('fx')) { let lf; try { lf = new Intl.NumberFormat('en-US', { style: 'currency', currency: fx.code, currencyDisplay: 'narrowSymbol', maximumFractionDigits: 0 }); } catch (e) { lf = { format: v => Math.round(v) + ' ' + fx.code }; } const r = Number(fx.rate);
       C.push(`<div class="sc"><h3><span class="i">💱</span>Currency</h3><div class="srow"><span>1 ${esc(trip.currency)}</span><b>${esc(fx.rate)} ${esc(fx.code)}</b></div><div class="fxq">${[10, 20].map(v => `<span><b>${money(v)}</b> ≈ ${esc(lf.format(v * r))}</span>`).join('')}</div><div class="line">Checked ${fmtDate(fx.checked_at)}${fx.url ? ` · <a href="${esc(fx.url)}" target="_blank" rel="noopener noreferrer">today's rate ↗</a>` : ''}</div></div>`); }
@@ -614,7 +619,7 @@ window.TripEngine = function (DATA, opts) {
     const subsHTML = (subs || []).length ? `<div class="bn-subs" aria-label="Sections in this tab">${subs.map(s => `<button type="button" class="sub" data-act="top" data-sec="${esc(s.id)}" data-sub="${esc(s.id)}">${esc(s.label)}</button>`).join('')}</div>` : '';
     return `<nav class="bnav" aria-label="Sections"><div class="in"><div class="bn-groups">${groupsHTML}</div>${subsHTML}</div></nav>`;
   }
-  const SHORT_LABEL = { fl: 'Flights', st: 'Stays', go: 'Transport', ac: 'To do', fd: 'Food', es: 'Essentials', wx: 'Weather', src: 'Sources' };
+  const SHORT_LABEL = { fl: 'Flights', st: 'Accommodation', go: 'Transportation', ac: 'To do', fd: 'Food', es: 'Essentials', wx: 'Weather', src: 'Sources' };
 
   // ---- behaviour: one delegated listener per root ----
   function jumpTo(id, paint) {
@@ -663,7 +668,7 @@ window.TripEngine = function (DATA, opts) {
   const titleTxt = `${String(trip.title).split(' · ')[0]} · ${rangeTxt}`;
   const metaTxt = () => { const o = trip.origin || {}, d = trip.destination || {}; return { route: `${o.city || o.iata || ''}${o.iata ? ' (' + o.iata + ')' : ''} → ${d.city}${d.iata ? ' (' + d.iata + ')' : ''}`, dates: rangeTxt, nights, days, travelers, tripType: trip.trip_type === 'one_way' ? 'One way' : 'Round trip', checked: fmtDateY(trip.generated_at), dest: d }; };
 
-  const api = { DATA, trip, items, state, TIERS, REAL_TIERS, CATS, GROUPS, NB, SHORT_LABEL, nights, days, travelers, money, money2, esc, fmtDate, fmtDateY, hm, fmtHM, tierLabel, titleTxt, metaTxt, isOn, setOn, line, tierTotal, onItems, kpis, selectedStay, selGroups, groupsPresent, secExists, secLabel, groupOfSec, store, bind, jumpTo, copySummary,
+  const api = { DATA, trip, items, state, TIERS, REAL_TIERS, CATS, GROUPS, NB, SHORT_LABEL, nbColor, nbName, nights, days, travelers, money, money2, esc, fmtDate, fmtDateY, hm, fmtHM, tierLabel, titleTxt, metaTxt, isOn, setOn, line, tierTotal, onItems, kpis, selectedStay, selGroups, groupsPresent, secExists, secLabel, groupOfSec, store, bind, jumpTo, copySummary,
     rainStats, seasonInfo, dayWeather,
     html: { category: categoryHTML, item: itemHTML, neighborhoods: neighborhoodsHTML, weather: weatherHTML, weatherTiles: weatherTilesHTML, entry: entryHTML, onward: onwardHTML, ground: groundHTML, daytrips: dayTripsHTML, localfood: localFoodHTML, restaurants: restaurantsHTML, nearby: nearbyHTML, selection: selectionHTML, breakdown: breakdownHTML, compare: compareHTML, tierTabs: tierTabsHTML, calendar: calendarHTML, master: masterHTML, coverage: coverageHTML, notes: notesHTML, fx: fxHTML, rides: ridesHTML, sim: simHTML, bottomNav: bottomNavHTML,
       origSide: origSideHTML, rowLinks, fxStrip: fxStripHTML,

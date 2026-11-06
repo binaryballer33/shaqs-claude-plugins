@@ -42,7 +42,7 @@ You are producing two things for the user:
    by `scripts/build_dashboard.py`. The template is the **Mission Control** design (user's instruction, Nov 6 2026;
    sources in `assets/dashboard-src/`, regenerate with `python assets/dashboard-src/assemble.py` after editing them):
    a dark workspace with a light-theme toggle; a left rail with a collapsible Price tier panel (Budget, Mid-tier,
-   Upper class, Luxury, **Custom**), the Workspace tabs (Flights · Stays · Getting around · Things to do · Food ·
+   Upper class, Luxury, **Custom**), the Workspace tabs (Flights · Accommodation · Transportation · Things to do · Food ·
    Essentials · Weather · Sources) and the essentials cards (entry must-haves, your selection, weather & rainy season,
    your dates, custom trip, airport → stay, SIM, onward travel); a header with the selected total, a Ledger drawer,
    check-in / check-out dates and a currency strip; a bottom navigation router whose chips are the current tab's
