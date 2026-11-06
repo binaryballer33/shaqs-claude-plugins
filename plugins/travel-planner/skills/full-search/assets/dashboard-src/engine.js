@@ -615,13 +615,13 @@ window.TripEngine = function (DATA, opts) {
   }
   // ---- bottom navigation (a router shared by every template) ----
   function bottomNavHTML(screens, current, subs) {
-    const groupsHTML = screens.map(s => `<button type="button" data-act="group" data-val="${esc(s.id)}" aria-selected="${current === s.id}" title="${esc(s.label)}${GROUP_KEY[s.id] ? ' (press ' + GROUP_KEY[s.id] + ')' : ''}"><span class="ic" aria-hidden="true">${s.icon}</span><span class="lb">${esc(s.label)}</span>${keyBadge(s.id)}</button>`).join('');
+    const groupsHTML = screens.map(s => `<button type="button" data-act="group" data-val="${esc(s.id)}" aria-selected="${current === s.id}" title="${esc(s.label)}${GROUP_KEY[s.id] ? ' (press ' + GROUP_KEY[s.id] + ')' : ''}"><span class="ic" aria-hidden="true">${s.icon}</span><span class="lb">${esc(s.label)}</span></button>`).join('');
     const subsHTML = (subs || []).length ? `<div class="bn-subs" aria-label="Sections in this tab">${subs.map((s, i) => `<button type="button" class="sub" data-act="top" data-sec="${esc(s.id)}" data-sub="${esc(s.id)}" title="Press ${i + 1} to jump here">${i < 9 ? `<kbd>${i + 1}</kbd>` : ''}${esc(s.label)}</button>`).join('')}</div>` : '';
     return `<nav class="bnav" aria-label="Sections"><div class="in"><div class="bn-groups">${groupsHTML}</div>${subsHTML}</div></nav>`;
   }
   const SHORT_LABEL = { fl: 'Flights', st: 'Accommodation', go: 'Transportation', ac: 'To do', fd: 'Food', es: 'Essentials', wx: 'Weather', src: 'Sources' };
   const GROUP_KEY = { fl: 'F', st: 'A', go: 'T', ac: '⇧T', fd: '⇧F', es: 'E', wx: 'W', src: '⇧S' };   // the keyboard shortcut of each tab, shown as a badge on its buttons
-  const keyBadge = id => GROUP_KEY[id] ? `<kbd class="gk">${GROUP_KEY[id]}</kbd>` : '';
+  const keyBadge = id => GROUP_KEY[id] ? `<kbd class="gk">${GROUP_KEY[id].replace('⇧', '<i class="sh">⇧</i>')}</kbd>` : '';
 
   // ---- behaviour: one delegated listener per root ----
   function jumpTo(id, paint) {

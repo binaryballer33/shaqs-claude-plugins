@@ -195,9 +195,9 @@ details.more { margin-top: 6px; font-size: 12.5px; } details.more summary { curs
 .bn-subs .sub { flex: 0 0 auto; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; white-space: nowrap; } .bn-subs .sub:hover { border-color: var(--accent); color: var(--text); }
 .bn-subs .sub.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 kbd.gk { display: inline-block; font-family: var(--mono); font-size: 9.5px; line-height: 13px; min-width: 13px; text-align: center; border-radius: 4px; padding: 0 3px; background: color-mix(in srgb, currentColor 14%, transparent); color: inherit; border: 1px solid color-mix(in srgb, currentColor 35%, transparent); opacity: .85; }
-.bn-groups button kbd.gk { margin-left: -2px; } .bn-groups button[aria-selected="true"] kbd.gk { opacity: 1; }
+kbd .sh, kbd.gk .sh { font-style: normal; margin-right: 3px; }
 .bn-subs .sub kbd { display: inline-block; font-family: var(--mono); font-size: 10px; line-height: 14px; min-width: 14px; text-align: center; border-radius: 4px; padding: 0 3px; margin-right: 6px; background: color-mix(in srgb, currentColor 14%, transparent); color: inherit; border: 1px solid color-mix(in srgb, currentColor 35%, transparent); }
-@media (max-width: 760px) { .bnav .in { flex-direction: column; align-items: stretch; gap: 4px; } .bn-groups { justify-content: space-between; } .bn-groups button { padding: 5px 6px; font-size: 11px; } .bn-subs { border-left: 0; padding-left: 0; } .bn-groups button kbd.gk { display: none; } }
+@media (max-width: 760px) { .bnav .in { flex-direction: column; align-items: stretch; gap: 4px; } .bn-groups { justify-content: space-between; } .bn-groups button { padding: 5px 6px; font-size: 11px; } .bn-subs { border-left: 0; padding-left: 0; } }
 body { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
 
 @media (max-width: 700px) {
@@ -939,13 +939,13 @@ window.TripEngine = function (DATA, opts) {
   }
   // ---- bottom navigation (a router shared by every template) ----
   function bottomNavHTML(screens, current, subs) {
-    const groupsHTML = screens.map(s => `<button type="button" data-act="group" data-val="${esc(s.id)}" aria-selected="${current === s.id}" title="${esc(s.label)}${GROUP_KEY[s.id] ? ' (press ' + GROUP_KEY[s.id] + ')' : ''}"><span class="ic" aria-hidden="true">${s.icon}</span><span class="lb">${esc(s.label)}</span>${keyBadge(s.id)}</button>`).join('');
+    const groupsHTML = screens.map(s => `<button type="button" data-act="group" data-val="${esc(s.id)}" aria-selected="${current === s.id}" title="${esc(s.label)}${GROUP_KEY[s.id] ? ' (press ' + GROUP_KEY[s.id] + ')' : ''}"><span class="ic" aria-hidden="true">${s.icon}</span><span class="lb">${esc(s.label)}</span></button>`).join('');
     const subsHTML = (subs || []).length ? `<div class="bn-subs" aria-label="Sections in this tab">${subs.map((s, i) => `<button type="button" class="sub" data-act="top" data-sec="${esc(s.id)}" data-sub="${esc(s.id)}" title="Press ${i + 1} to jump here">${i < 9 ? `<kbd>${i + 1}</kbd>` : ''}${esc(s.label)}</button>`).join('')}</div>` : '';
     return `<nav class="bnav" aria-label="Sections"><div class="in"><div class="bn-groups">${groupsHTML}</div>${subsHTML}</div></nav>`;
   }
   const SHORT_LABEL = { fl: 'Flights', st: 'Accommodation', go: 'Transportation', ac: 'To do', fd: 'Food', es: 'Essentials', wx: 'Weather', src: 'Sources' };
   const GROUP_KEY = { fl: 'F', st: 'A', go: 'T', ac: '⇧T', fd: '⇧F', es: 'E', wx: 'W', src: '⇧S' };   // the keyboard shortcut of each tab, shown as a badge on its buttons
-  const keyBadge = id => GROUP_KEY[id] ? `<kbd class="gk">${GROUP_KEY[id]}</kbd>` : '';
+  const keyBadge = id => GROUP_KEY[id] ? `<kbd class="gk">${GROUP_KEY[id].replace('⇧', '<i class="sh">⇧</i>')}</kbd>` : '';
 
   // ---- behaviour: one delegated listener per root ----
   function jumpTo(id, paint) {
@@ -1068,7 +1068,7 @@ window.TripEngine = function (DATA, opts) {
     scrollTo({ top: el.getBoundingClientRect().top + scrollY - off, behavior: 'auto' });
     el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1500);
   }
-  document.getElementById('r-keys').innerHTML = [['F', 'Flights'], ['A / L / S', 'Accommodation'], ['T', 'Transportation'], ['⇧T', 'Things to do'], ['⇧F', 'Food'], ['E', 'Essentials'], ['W', 'Weather'], ['⇧S', 'Sources'], ['1–9', 'Sections of the open tab']].map(([k, l]) => `<span><kbd>${k}</kbd>${l}</span>`).join(' · ');
+  document.getElementById('r-keys').innerHTML = [['F', 'Flights'], ['A / L / S', 'Accommodation'], ['T', 'Transportation'], ['<i class="sh">⇧</i>T', 'Things to do'], ['<i class="sh">⇧</i>F', 'Food'], ['E', 'Essentials'], ['W', 'Weather'], ['<i class="sh">⇧</i>S', 'Sources'], ['1–9', 'Sections of the open tab']].map(([k, l]) => `<span><kbd>${k}</kbd>${l}</span>`).join(' · ');
   // partial builds (build_dashboard.py --partial / --map-pending): say what is still being researched and reload every minute
   (function pending() {
     const pend = E.trip.pending || []; if (!pend.length) return;

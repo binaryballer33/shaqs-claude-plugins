@@ -192,7 +192,7 @@ main { padding: 14px 20px 60px; }
     scrollTo({ top: el.getBoundingClientRect().top + scrollY - off, behavior: 'auto' });
     el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1500);
   }
-  document.getElementById('r-keys').innerHTML = [['F', 'Flights'], ['A / L / S', 'Accommodation'], ['T', 'Transportation'], ['⇧T', 'Things to do'], ['⇧F', 'Food'], ['E', 'Essentials'], ['W', 'Weather'], ['⇧S', 'Sources'], ['1–9', 'Sections of the open tab']].map(([k, l]) => `<span><kbd>${k}</kbd>${l}</span>`).join(' · ');
+  document.getElementById('r-keys').innerHTML = [['F', 'Flights'], ['A / L / S', 'Accommodation'], ['T', 'Transportation'], ['<i class="sh">⇧</i>T', 'Things to do'], ['<i class="sh">⇧</i>F', 'Food'], ['E', 'Essentials'], ['W', 'Weather'], ['<i class="sh">⇧</i>S', 'Sources'], ['1–9', 'Sections of the open tab']].map(([k, l]) => `<span><kbd>${k}</kbd>${l}</span>`).join(' · ');
   // partial builds (build_dashboard.py --partial / --map-pending): say what is still being researched and reload every minute
   (function pending() {
     const pend = E.trip.pending || []; if (!pend.length) return;
