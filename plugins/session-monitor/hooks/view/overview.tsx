@@ -1,6 +1,6 @@
-// Overview: the models, your latest prompts and the agents, the latest calls
-// to finish, commands by kind and what runs now, the session's figures, the
-// heaviest commands, each tool's calls, time spent and what was published,
+// Overview: what was published, the models, your latest prompts and the
+// agents, the latest calls to finish, commands by kind and what runs now, the
+// session's figures, the heaviest commands, each tool's calls and time spent,
 // each a card. The live rates are the header's, over every tab; the charts
 // are Compute's.
 
@@ -44,6 +44,7 @@ import {
   toneWatts,
   type Tone,
 } from '../lib/format'
+import { fileManagerName } from '../lib/apps'
 import { actorText, callRuns, commandGap, modelSegs, netSeg } from './commands'
 import type { RowSegment } from './row'
 import { sessionBars, viewedData } from './sessions' // --- session history ---
@@ -58,6 +59,7 @@ import { callCard, cardStack, energySum, picker, energyText, figure, figureRow, 
 
 /** The keys of Overview's cards, in the order drawn (the Prompts and Agents cards are drawn by their tabs' views). */
 export const OVERVIEW_CARDS = {
+  artifacts: 'card:ov:artifacts',
   controls: 'card:ov:controls',
   models: 'card:ov:models',
   prompts: OVERVIEW_PROMPTS_CARD,
@@ -69,7 +71,6 @@ export const OVERVIEW_CARDS = {
   top: 'card:ov:top',
   tools: 'card:ov:tools',
   time: 'card:ov:time',
-  artifacts: 'card:ov:artifacts',
 } as const
 
 type Share = { name: string; totals: Totals; rateIn: number; rateOut: number; tone: Tone }
@@ -411,7 +412,7 @@ const artifactsCard = (live: PaneData, ui: Ui, act: Actions): RenderElement => {
               <Text dimColor>{one.kind === 'page' ? `page${one.version !== undefined ? ` · v${oneLine(one.version, 12)}` : ''}` : 'file sent'}</Text>
               {one.count > 1 && <Text dimColor>· {one.kind === 'page' ? 'published' : 'sent'} {one.count}×</Text>}
               {one.kind === 'file' && one.path !== undefined && (
-                <Button key={`art:${keyOf(one.id)}`} label="Reveal in Finder" dimColor onPress={() => act.revealArtifact(one.id)} />
+                <Button key={`art:${keyOf(one.id)}`} label={`Reveal in ${fileManagerName(data.isWindows)}`} dimColor onPress={() => act.revealArtifact(one.id)} />
               )}
             </Box>
             {(one.caption !== undefined || one.path !== undefined) && (
@@ -624,6 +625,7 @@ export const overview = (data: PaneData, ui: Ui, act: Actions): RenderElement =>
     return <Text dimColor>Loading…</Text>
   }
   const cards: (RenderElement | null)[] = [
+    artifactsCard(data, ui, act),
     controlsCard(data, ui, act),
     modelsCard(data, data.models, ui),
     latestPromptsSection(data, ui, act),
@@ -635,7 +637,6 @@ export const overview = (data: PaneData, ui: Ui, act: Actions): RenderElement =>
     topCard(data, ui, act),
     toolsCard(data, ui),
     timeCard(data, live, ui),
-    artifactsCard(data, ui, act),
   ]
   return cardStack(
     ui,

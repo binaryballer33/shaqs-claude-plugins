@@ -166,7 +166,7 @@ export type ExplorerEntryRow = Extract<ExplorerRow, { type: 'entry' }>
  * rows right below it. An entry is ignored when git ignores it or a folder
  * above it.
  */
-export const explorerRows = (view: ExplorerView): ExplorerRow[] => {
+export const explorerRows = (view: ExplorerView, fileManager = 'Finder'): ExplorerRow[] => {
   const { tree } = view
   const rows: ExplorerRow[] = []
   const expanded = new Set(tree.expanded)
@@ -197,7 +197,7 @@ export const explorerRows = (view: ExplorerView): ExplorerRow[] => {
       }
     }
     if (listing.isTruncated) {
-      rows.push({ type: 'note', path: dir, depth, text: `… ${listing.total - listing.entries.length} more entries not listed: Open in Finder shows them all`, tone: '' })
+      rows.push({ type: 'note', path: dir, depth, text: `… ${listing.total - listing.entries.length} more entries not listed: Open in ${fileManager} shows them all`, tone: '' })
     }
     if (listing.total === 0 && error === undefined && depth > 0) {
       rows.push({ type: 'note', path: dir, depth, text: 'Empty', tone: '' })

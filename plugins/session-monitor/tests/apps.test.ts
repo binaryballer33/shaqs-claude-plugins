@@ -3,12 +3,16 @@ import { describe, expect, test } from 'claude-code/testing'
 import {
   appFor,
   chosenApp,
+  fileManagerName,
+  fromMsysPath,
   isOpenOk,
   isWindowsPath,
   openArgv,
   openLabel,
   toWindowsPath,
+  trashName,
   windowsDefaultArgv,
+  windowsExplorerArgv,
   windowsOpenArgv,
   windowsTrashArgv,
 } from '../hooks/lib/apps'
@@ -85,8 +89,20 @@ describe('the same buttons on Windows', () => {
     expect(windowsOpenArgv('C:/repo/index.html', false, false)).toEqual(['cmd.exe', '/d', '/c', 'start', '', 'chrome', 'C:\\repo\\index.html'])
     expect(windowsOpenArgv('C:/repo/logo.png', false, false)).toEqual(windowsDefaultArgv('C:/repo/logo.png'))
     expect(windowsDefaultArgv("C:/repo/it's.png")[4]).toBe("Invoke-Item -LiteralPath 'C:\\repo\\it''s.png'")
-    expect(windowsOpenArgv('C:/repo/src', false, true)).toEqual(['explorer.exe', 'C:\\repo\\src'])
-    expect(windowsOpenArgv('C:/repo/app.py', true, false)).toEqual(['explorer.exe', '/select,C:\\repo\\app.py'])
+    expect(windowsOpenArgv('C:/repo/src', false, true)).toEqual(windowsExplorerArgv('C:/repo/src', false))
+    expect(windowsOpenArgv('C:/repo/app.py', true, false)).toEqual(windowsExplorerArgv('C:/repo/app.py', true))
+  })
+
+  test('Explorer is started by PowerShell, which quotes the path for it and brings its window to the front', () => {
+    const [exe, , , flag, script = ''] = windowsExplorerArgv("C:/my repo/it's.pdf", true)
+    expect([exe, flag]).toEqual(['powershell.exe', '-Command'])
+    expect(script).toContain("$p = 'C:\\my repo\\it''s.pdf'")
+    expect(script).toContain(`'/select,"' + $p + '"'`)
+    expect(script).toContain('SetForegroundWindow')
+    const folder = windowsExplorerArgv('C:/my repo', false)[4] ?? ''
+    expect(folder).toContain(`'"' + $p + '"'`)
+    expect(folder).toContain('$dir = $p')
+    expect(script).toContain('GetDirectoryName($p)')
   })
 
   test('the app a command chose is read back, and Explorer answering 1 is a success', () => {
@@ -104,5 +120,20 @@ describe('the same buttons on Windows', () => {
     expect(argv.slice(0, 4)).toEqual(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command'])
     expect(argv[4]).toContain("$p = 'C:\\repo\\it''s here'")
     expect(argv[4]).toContain('SendToRecycleBin')
+  })
+
+  test('the buttons name the platform\'s file manager and trash', () => {
+    expect(fileManagerName(true)).toBe('File Explorer')
+    expect(fileManagerName(false)).toBe('Finder')
+    expect(trashName(true)).toBe('Recycle Bin')
+    expect(trashName(false)).toBe('Trash')
+  })
+
+  test('a Git Bash path becomes the drive path Explorer needs; any other path is left as it is', () => {
+    expect(fromMsysPath('/c/Users/me/a b.pdf')).toBe('C:/Users/me/a b.pdf')
+    expect(fromMsysPath('/d')).toBe('D:/')
+    expect(fromMsysPath('C:/Users/me')).toBe('C:/Users/me')
+    expect(fromMsysPath('/repo/src')).toBe('/repo/src')
+    expect(windowsOpenArgv(fromMsysPath('/c/Users/me/a.pdf'), true, false)[4]).toContain("$p = 'C:\\Users\\me\\a.pdf'")
   })
 })

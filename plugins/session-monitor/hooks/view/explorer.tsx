@@ -29,7 +29,7 @@ import {
 } from '../lib/explorer'
 import { fitList, listShareOf } from '../lib/fit'
 import { fileIcon } from '../lib/icons'
-import { openLabel } from '../lib/apps'
+import { fileManagerName, openLabel, trashName } from '../lib/apps'
 import { baseName } from '../lib/tree'
 import { diffPanel } from './diff'
 import { CARD_BACKGROUND, cardStack, rowLine, sectionCard, seg, type Actions, type PaneData, type Ui } from './kit'
@@ -104,14 +104,15 @@ const actionsOf = (row: ExplorerEntryRow, pane: ExplorerPane, data: PaneData, ui
         {canType && <Button key="xp:act:rename" label="Rename" onPress={() => act.explorerRename(row.path)} />}
         <Button key="xp:act:delete" label={isArmed ? 'Click again to delete' : 'Delete'} variant={isArmed ? 'primary' : undefined} onPress={() => act.explorerDelete(row.path)} />
         {!isDir && <Button key="xp:act:open" label={openLabel(entry.name)} onPress={() => act.explorerOpen(row.path, false)} />}
-        <Button key="xp:act:reveal" label="Reveal in Finder" onPress={() => act.explorerOpen(row.path, true)} />
+        <Button key="xp:act:reveal" label={`Reveal in ${fileManagerName(data.isWindows)}`} onPress={() => act.explorerOpen(row.path, true)} />
         <Button key="xp:act:copy" label="Copy path" onPress={press => act.copy(row.path, press)} />
       </Box>
       {entry.kind === 'file' && canType && !pane.canEdit && <Text dimColor>Editing here needs Claude Code 2.1.308 or later: {openLabel(entry.name)} edits it.</Text>}
       {isArmed && (
         <Text color="warning">
           A second click within {EXPLORER_ARM_MS / 1000} s moves {name}
-          {isDir ? ' and everything in it' : ''} to the Trash (Finder’s Put Back restores it).
+          {isDir ? ' and everything in it' : ''} to the {trashName(data.isWindows)}
+          {data.isWindows ? ' (Restore in the Recycle Bin brings it back).' : ' (Finder’s Put Back restores it).'}
         </Text>
       )}
     </Box>
@@ -241,7 +242,7 @@ const toolbar = (pane: ExplorerPane, data: PaneData, ui: Ui, act: Actions): Rend
       {canType && <Button key="xp:newfolder" label="New folder" onPress={() => act.explorerNew('folder')} />}
       <Button key="xp:refresh" label="Refresh" onPress={() => act.explorerRefresh()} />
       <Button key="xp:collapse" label="Collapse all" onPress={() => act.explorerCollapse()} />
-      <Button key="xp:finder" label="Open in Finder" onPress={() => act.explorerOpen(root, false)} />
+      <Button key="xp:finder" label={`Open in ${fileManagerName(data.isWindows)}`} onPress={() => act.explorerOpen(root, false)} />
       {canType && <Text dimColor>new entries go in {oneLine(relPath(root, targetDir(pane.view)), 160)}/</Text>}
     </Box>
   )
@@ -268,7 +269,8 @@ export const explorerTab = (data: PaneData, ui: Ui, act: Actions): RenderElement
   if (root === '') {
     return cardStack(ui, data, [<Text color="warning">Loading the project folder…</Text>])
   }
-  const rows = explorerRows(view)
+  const fileManager = fileManagerName(data.isWindows)
+  const rows = explorerRows(view, fileManager)
   const form = view.form
   const anchor = form === null ? undefined : formAnchor(form)
   const editPath = view.edit?.path
@@ -312,7 +314,7 @@ export const explorerTab = (data: PaneData, ui: Ui, act: Actions): RenderElement
     }
   }
   const left = rows.length - kept.length
-  const leftNote = view.tree.expanded.length > 0 ? `… ${left} more rows (close a folder to see them)` : `… ${left} more rows not drawn: Open in Finder lists the whole folder`
+  const leftNote = view.tree.expanded.length > 0 ? `… ${left} more rows (close a folder to see them)` : `… ${left} more rows not drawn: Open in ${fileManager} lists the whole folder`
   const listing = view.tree.listings[root]
   return cardStack(ui, data, [
     sectionCard(ui, data, EXPLORER_CARD_KEY, oneLine(projectTitle(root), 80), oneLine(root, 200), [

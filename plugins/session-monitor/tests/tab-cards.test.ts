@@ -59,10 +59,11 @@ test("overview: the live figures are the header's alone; its sections are cards,
     for (const gone of ['Live stats', 'Down', 'Up', 'Power', 'Memory', 'Running']) {
       expect(await ui.find({ type: 'Text', text: new RegExp(`^${gone}$`) })).toBeUndefined()
     }
-    // Its sections are cards, in order: Prompts right under Models & effort, right above Agents;
+    // Its sections are cards, in order: Artifacts first; Prompts right under Models & effort, right above Agents;
     // Running now right under Commands; Session right above Heaviest commands.
     const cards: string[] = Object.values(OVERVIEW_CARDS)
     expect(cards).toEqual([
+      OVERVIEW_CARDS.artifacts,
       OVERVIEW_CARDS.controls,
       OVERVIEW_CARDS.models,
       OVERVIEW_CARDS.prompts,
@@ -74,7 +75,6 @@ test("overview: the live figures are the header's alone; its sections are cards,
       OVERVIEW_CARDS.top,
       OVERVIEW_CARDS.tools,
       OVERVIEW_CARDS.time,
-      OVERVIEW_CARDS.artifacts,
     ])
     expect((await keysOf(ui, 'card:ov:')).filter(key => cards.includes(key))).toEqual(cards)
     for (const key of cards) {
