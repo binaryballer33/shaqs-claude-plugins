@@ -185,8 +185,10 @@ details.more { margin-top: 6px; font-size: 12.5px; } details.more summary { curs
 .bn-subs { display: flex; gap: 4px; flex: 1 1 auto; min-width: 0; overflow-x: auto; padding: 2px 0 2px 10px; border-left: 1px solid var(--border-strong); scrollbar-width: none; } .bn-subs::-webkit-scrollbar { display: none; }
 .bn-subs .sub { flex: 0 0 auto; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; white-space: nowrap; } .bn-subs .sub:hover { border-color: var(--accent); color: var(--text); }
 .bn-subs .sub.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+kbd.gk { display: inline-block; font-family: var(--mono); font-size: 9.5px; line-height: 13px; min-width: 13px; text-align: center; border-radius: 4px; padding: 0 3px; background: color-mix(in srgb, currentColor 14%, transparent); color: inherit; border: 1px solid color-mix(in srgb, currentColor 35%, transparent); opacity: .85; }
+.bn-groups button kbd.gk { margin-left: -2px; } .bn-groups button[aria-selected="true"] kbd.gk { opacity: 1; }
 .bn-subs .sub kbd { display: inline-block; font-family: var(--mono); font-size: 10px; line-height: 14px; min-width: 14px; text-align: center; border-radius: 4px; padding: 0 3px; margin-right: 6px; background: color-mix(in srgb, currentColor 14%, transparent); color: inherit; border: 1px solid color-mix(in srgb, currentColor 35%, transparent); }
-@media (max-width: 760px) { .bnav .in { flex-direction: column; align-items: stretch; gap: 4px; } .bn-groups { justify-content: space-between; } .bn-groups button { padding: 5px 6px; font-size: 11px; } .bn-subs { border-left: 0; padding-left: 0; } }
+@media (max-width: 760px) { .bnav .in { flex-direction: column; align-items: stretch; gap: 4px; } .bn-groups { justify-content: space-between; } .bn-groups button { padding: 5px 6px; font-size: 11px; } .bn-subs { border-left: 0; padding-left: 0; } .bn-groups button kbd.gk { display: none; } }
 body { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
 
 @media (max-width: 700px) {

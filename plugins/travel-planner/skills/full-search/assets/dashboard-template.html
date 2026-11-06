@@ -194,8 +194,10 @@ details.more { margin-top: 6px; font-size: 12.5px; } details.more summary { curs
 .bn-subs { display: flex; gap: 4px; flex: 1 1 auto; min-width: 0; overflow-x: auto; padding: 2px 0 2px 10px; border-left: 1px solid var(--border-strong); scrollbar-width: none; } .bn-subs::-webkit-scrollbar { display: none; }
 .bn-subs .sub { flex: 0 0 auto; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; white-space: nowrap; } .bn-subs .sub:hover { border-color: var(--accent); color: var(--text); }
 .bn-subs .sub.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+kbd.gk { display: inline-block; font-family: var(--mono); font-size: 9.5px; line-height: 13px; min-width: 13px; text-align: center; border-radius: 4px; padding: 0 3px; background: color-mix(in srgb, currentColor 14%, transparent); color: inherit; border: 1px solid color-mix(in srgb, currentColor 35%, transparent); opacity: .85; }
+.bn-groups button kbd.gk { margin-left: -2px; } .bn-groups button[aria-selected="true"] kbd.gk { opacity: 1; }
 .bn-subs .sub kbd { display: inline-block; font-family: var(--mono); font-size: 10px; line-height: 14px; min-width: 14px; text-align: center; border-radius: 4px; padding: 0 3px; margin-right: 6px; background: color-mix(in srgb, currentColor 14%, transparent); color: inherit; border: 1px solid color-mix(in srgb, currentColor 35%, transparent); }
-@media (max-width: 760px) { .bnav .in { flex-direction: column; align-items: stretch; gap: 4px; } .bn-groups { justify-content: space-between; } .bn-groups button { padding: 5px 6px; font-size: 11px; } .bn-subs { border-left: 0; padding-left: 0; } }
+@media (max-width: 760px) { .bnav .in { flex-direction: column; align-items: stretch; gap: 4px; } .bn-groups { justify-content: space-between; } .bn-groups button { padding: 5px 6px; font-size: 11px; } .bn-subs { border-left: 0; padding-left: 0; } .bn-groups button kbd.gk { display: none; } }
 body { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
 
 @media (max-width: 700px) {
@@ -220,7 +222,7 @@ details.rtiers > summary h4 { margin: 0; } details.rtiers > summary .cur { margi
 details.rtiers > div { margin-top: 6px; }
 .rail .tiers { display: flex; flex-direction: column; gap: 4px; } .rail .tier-btn { flex-direction: row; align-items: center; justify-content: space-between; padding: 9px 10px; gap: 6px; background: transparent; border-color: transparent; } .rail .tier-btn .tl { text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--text-2); } .rail .tier-btn .tv { font-size: 13.5px; } .rail .tier-btn .ts { display: none; }
 .rail .tier-btn[aria-selected="true"] { background: var(--surface-3); border-color: var(--border-strong); box-shadow: inset 3px 0 0 var(--accent); } .rail .tier-btn[aria-selected="true"] .tl { color: var(--text); font-weight: 700; }
-.gnav { display: flex; flex-direction: column; gap: 2px; } .gnav button { display: flex; align-items: center; gap: 10px; border: 0; background: transparent; border-radius: 7px; padding: 7px 10px; text-align: left; color: var(--text-2); font-weight: 600; font-size: 12.5px; } .gnav button:hover { background: var(--surface-2); color: var(--text); } .gnav button[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-ink); } .gnav .n { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.gnav { display: flex; flex-direction: column; gap: 2px; } .gnav button { display: flex; align-items: center; gap: 10px; border: 0; background: transparent; border-radius: 7px; padding: 7px 10px; text-align: left; color: var(--text-2); font-weight: 600; font-size: 12.5px; } .gnav button .n { margin-left: auto; } .gnav button kbd.gk { flex: 0 0 auto; } .gnav button:hover { background: var(--surface-2); color: var(--text); } .gnav button[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-ink); } .gnav .n { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--muted); }
 .rail .foot { margin-top: auto; font-size: 11px; color: var(--muted); }
 /* ---- the original dashboard's sidebar components, ported as-is ---- */
 .oside { display: grid; gap: 10px; min-width: 0; font-size: 12px; line-height: 1.4; }
@@ -937,11 +939,13 @@ window.TripEngine = function (DATA, opts) {
   }
   // ---- bottom navigation (a router shared by every template) ----
   function bottomNavHTML(screens, current, subs) {
-    const groupsHTML = screens.map(s => `<button type="button" data-act="group" data-val="${esc(s.id)}" aria-selected="${current === s.id}" title="${esc(s.label)}"><span class="ic" aria-hidden="true">${s.icon}</span><span class="lb">${esc(s.label)}</span></button>`).join('');
+    const groupsHTML = screens.map(s => `<button type="button" data-act="group" data-val="${esc(s.id)}" aria-selected="${current === s.id}" title="${esc(s.label)}${GROUP_KEY[s.id] ? ' (press ' + GROUP_KEY[s.id] + ')' : ''}"><span class="ic" aria-hidden="true">${s.icon}</span><span class="lb">${esc(s.label)}</span>${keyBadge(s.id)}</button>`).join('');
     const subsHTML = (subs || []).length ? `<div class="bn-subs" aria-label="Sections in this tab">${subs.map((s, i) => `<button type="button" class="sub" data-act="top" data-sec="${esc(s.id)}" data-sub="${esc(s.id)}" title="Press ${i + 1} to jump here">${i < 9 ? `<kbd>${i + 1}</kbd>` : ''}${esc(s.label)}</button>`).join('')}</div>` : '';
     return `<nav class="bnav" aria-label="Sections"><div class="in"><div class="bn-groups">${groupsHTML}</div>${subsHTML}</div></nav>`;
   }
   const SHORT_LABEL = { fl: 'Flights', st: 'Accommodation', go: 'Transportation', ac: 'To do', fd: 'Food', es: 'Essentials', wx: 'Weather', src: 'Sources' };
+  const GROUP_KEY = { fl: 'F', st: 'A', go: 'T', ac: '⇧T', fd: '⇧F', es: 'E', wx: 'W', src: '⇧S' };   // the keyboard shortcut of each tab, shown as a badge on its buttons
+  const keyBadge = id => GROUP_KEY[id] ? `<kbd class="gk">${GROUP_KEY[id]}</kbd>` : '';
 
   // ---- behaviour: one delegated listener per root ----
   function jumpTo(id, paint) {
@@ -990,7 +994,7 @@ window.TripEngine = function (DATA, opts) {
   const titleTxt = `${String(trip.title).split(' · ')[0]} · ${rangeTxt}`;
   const metaTxt = () => { const o = trip.origin || {}, d = trip.destination || {}; return { route: `${o.city || o.iata || ''}${o.iata ? ' (' + o.iata + ')' : ''} → ${d.city}${d.iata ? ' (' + d.iata + ')' : ''}`, dates: rangeTxt, nights, days, travelers, tripType: trip.trip_type === 'one_way' ? 'One way' : 'Round trip', checked: fmtDateY(trip.generated_at), dest: d }; };
 
-  const api = { DATA, trip, items, state, TIERS, REAL_TIERS, CATS, GROUPS, NB, SHORT_LABEL, nbColor, nbName, nights, days, travelers, money, money2, esc, fmtDate, fmtDateY, hm, fmtHM, tierLabel, titleTxt, metaTxt, isOn, setOn, line, tierTotal, onItems, kpis, selectedStay, selGroups, groupsPresent, secExists, secLabel, groupOfSec, store, bind, jumpTo, copySummary,
+  const api = { DATA, trip, items, state, TIERS, REAL_TIERS, CATS, GROUPS, NB, SHORT_LABEL, GROUP_KEY, keyBadge, nbColor, nbName, nights, days, travelers, money, money2, esc, fmtDate, fmtDateY, hm, fmtHM, tierLabel, titleTxt, metaTxt, isOn, setOn, line, tierTotal, onItems, kpis, selectedStay, selGroups, groupsPresent, secExists, secLabel, groupOfSec, store, bind, jumpTo, copySummary,
     rainStats, seasonInfo, dayWeather,
     html: { category: categoryHTML, item: itemHTML, neighborhoods: neighborhoodsHTML, weather: weatherHTML, weatherTiles: weatherTilesHTML, entry: entryHTML, onward: onwardHTML, ground: groundHTML, daytrips: dayTripsHTML, localfood: localFoodHTML, restaurants: restaurantsHTML, nearby: nearbyHTML, selection: selectionHTML, breakdown: breakdownHTML, compare: compareHTML, tierTabs: tierTabsHTML, calendar: calendarHTML, master: masterHTML, coverage: coverageHTML, notes: notesHTML, fx: fxHTML, rides: ridesHTML, sim: simHTML, bottomNav: bottomNavHTML,
       origSide: origSideHTML, rowLinks, fxStrip: fxStripHTML,
@@ -1017,8 +1021,8 @@ window.TripEngine = function (DATA, opts) {
     if (!groups.some(g => g.id === S.group)) S.group = groups[0].id;
     document.getElementById('r-tiers').innerHTML = H.tierTabs(S.tier);
     document.getElementById('r-cur').innerHTML = `${esc(E.tierLabel(S.tier))}<b>${money(k.total)}</b>`;
-    document.getElementById('r-nav').innerHTML = groups.map(g => `<button type="button" data-act="group" data-val="${g.id}" aria-selected="${S.group === g.id}"><span>${g.icon}</span>${esc(g.label)}<span class="n">${secCount(g) || ''}</span></button>`).join('');
-    document.getElementById('gtabs').innerHTML = groups.map(g => `<button type="button" data-act="group" data-val="${g.id}" aria-selected="${S.group === g.id}">${g.icon} ${esc(g.label)}</button>`).join('');
+    document.getElementById('r-nav').innerHTML = groups.map(g => `<button type="button" data-act="group" data-val="${g.id}" aria-selected="${S.group === g.id}" title="${esc(g.label)} (press ${E.GROUP_KEY[g.id] || ''})"><span>${g.icon}</span>${esc(g.label)}<span class="n">${secCount(g) || ''}</span>${E.keyBadge(g.id)}</button>`).join('');
+    document.getElementById('gtabs').innerHTML = groups.map(g => `<button type="button" data-act="group" data-val="${g.id}" aria-selected="${S.group === g.id}">${g.icon} ${esc(g.label)} ${E.keyBadge(g.id)}</button>`).join('');
     document.getElementById('bnav').innerHTML = H.bottomNav(SCREENS, S.group, (groups.find(x => x.id === S.group) || { secs: [] }).secs.map(s => ({ id: s, label: E.secLabel(s) })));
     document.getElementById('r-side').innerHTML = H.origSide({ skip: ['fx'] });
     document.getElementById('t-tier').textContent = E.tierLabel(S.tier);

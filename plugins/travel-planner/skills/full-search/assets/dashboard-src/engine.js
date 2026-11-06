@@ -615,11 +615,13 @@ window.TripEngine = function (DATA, opts) {
   }
   // ---- bottom navigation (a router shared by every template) ----
   function bottomNavHTML(screens, current, subs) {
-    const groupsHTML = screens.map(s => `<button type="button" data-act="group" data-val="${esc(s.id)}" aria-selected="${current === s.id}" title="${esc(s.label)}"><span class="ic" aria-hidden="true">${s.icon}</span><span class="lb">${esc(s.label)}</span></button>`).join('');
+    const groupsHTML = screens.map(s => `<button type="button" data-act="group" data-val="${esc(s.id)}" aria-selected="${current === s.id}" title="${esc(s.label)}${GROUP_KEY[s.id] ? ' (press ' + GROUP_KEY[s.id] + ')' : ''}"><span class="ic" aria-hidden="true">${s.icon}</span><span class="lb">${esc(s.label)}</span>${keyBadge(s.id)}</button>`).join('');
     const subsHTML = (subs || []).length ? `<div class="bn-subs" aria-label="Sections in this tab">${subs.map((s, i) => `<button type="button" class="sub" data-act="top" data-sec="${esc(s.id)}" data-sub="${esc(s.id)}" title="Press ${i + 1} to jump here">${i < 9 ? `<kbd>${i + 1}</kbd>` : ''}${esc(s.label)}</button>`).join('')}</div>` : '';
     return `<nav class="bnav" aria-label="Sections"><div class="in"><div class="bn-groups">${groupsHTML}</div>${subsHTML}</div></nav>`;
   }
   const SHORT_LABEL = { fl: 'Flights', st: 'Accommodation', go: 'Transportation', ac: 'To do', fd: 'Food', es: 'Essentials', wx: 'Weather', src: 'Sources' };
+  const GROUP_KEY = { fl: 'F', st: 'A', go: 'T', ac: '⇧T', fd: '⇧F', es: 'E', wx: 'W', src: '⇧S' };   // the keyboard shortcut of each tab, shown as a badge on its buttons
+  const keyBadge = id => GROUP_KEY[id] ? `<kbd class="gk">${GROUP_KEY[id]}</kbd>` : '';
 
   // ---- behaviour: one delegated listener per root ----
   function jumpTo(id, paint) {
@@ -668,7 +670,7 @@ window.TripEngine = function (DATA, opts) {
   const titleTxt = `${String(trip.title).split(' · ')[0]} · ${rangeTxt}`;
   const metaTxt = () => { const o = trip.origin || {}, d = trip.destination || {}; return { route: `${o.city || o.iata || ''}${o.iata ? ' (' + o.iata + ')' : ''} → ${d.city}${d.iata ? ' (' + d.iata + ')' : ''}`, dates: rangeTxt, nights, days, travelers, tripType: trip.trip_type === 'one_way' ? 'One way' : 'Round trip', checked: fmtDateY(trip.generated_at), dest: d }; };
 
-  const api = { DATA, trip, items, state, TIERS, REAL_TIERS, CATS, GROUPS, NB, SHORT_LABEL, nbColor, nbName, nights, days, travelers, money, money2, esc, fmtDate, fmtDateY, hm, fmtHM, tierLabel, titleTxt, metaTxt, isOn, setOn, line, tierTotal, onItems, kpis, selectedStay, selGroups, groupsPresent, secExists, secLabel, groupOfSec, store, bind, jumpTo, copySummary,
+  const api = { DATA, trip, items, state, TIERS, REAL_TIERS, CATS, GROUPS, NB, SHORT_LABEL, GROUP_KEY, keyBadge, nbColor, nbName, nights, days, travelers, money, money2, esc, fmtDate, fmtDateY, hm, fmtHM, tierLabel, titleTxt, metaTxt, isOn, setOn, line, tierTotal, onItems, kpis, selectedStay, selGroups, groupsPresent, secExists, secLabel, groupOfSec, store, bind, jumpTo, copySummary,
     rainStats, seasonInfo, dayWeather,
     html: { category: categoryHTML, item: itemHTML, neighborhoods: neighborhoodsHTML, weather: weatherHTML, weatherTiles: weatherTilesHTML, entry: entryHTML, onward: onwardHTML, ground: groundHTML, daytrips: dayTripsHTML, localfood: localFoodHTML, restaurants: restaurantsHTML, nearby: nearbyHTML, selection: selectionHTML, breakdown: breakdownHTML, compare: compareHTML, tierTabs: tierTabsHTML, calendar: calendarHTML, master: masterHTML, coverage: coverageHTML, notes: notesHTML, fx: fxHTML, rides: ridesHTML, sim: simHTML, bottomNav: bottomNavHTML,
       origSide: origSideHTML, rowLinks, fxStrip: fxStripHTML,

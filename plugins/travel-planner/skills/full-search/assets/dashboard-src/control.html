@@ -25,7 +25,7 @@ details.rtiers > summary h4 { margin: 0; } details.rtiers > summary .cur { margi
 details.rtiers > div { margin-top: 6px; }
 .rail .tiers { display: flex; flex-direction: column; gap: 4px; } .rail .tier-btn { flex-direction: row; align-items: center; justify-content: space-between; padding: 9px 10px; gap: 6px; background: transparent; border-color: transparent; } .rail .tier-btn .tl { text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--text-2); } .rail .tier-btn .tv { font-size: 13.5px; } .rail .tier-btn .ts { display: none; }
 .rail .tier-btn[aria-selected="true"] { background: var(--surface-3); border-color: var(--border-strong); box-shadow: inset 3px 0 0 var(--accent); } .rail .tier-btn[aria-selected="true"] .tl { color: var(--text); font-weight: 700; }
-.gnav { display: flex; flex-direction: column; gap: 2px; } .gnav button { display: flex; align-items: center; gap: 10px; border: 0; background: transparent; border-radius: 7px; padding: 7px 10px; text-align: left; color: var(--text-2); font-weight: 600; font-size: 12.5px; } .gnav button:hover { background: var(--surface-2); color: var(--text); } .gnav button[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-ink); } .gnav .n { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.gnav { display: flex; flex-direction: column; gap: 2px; } .gnav button { display: flex; align-items: center; gap: 10px; border: 0; background: transparent; border-radius: 7px; padding: 7px 10px; text-align: left; color: var(--text-2); font-weight: 600; font-size: 12.5px; } .gnav button .n { margin-left: auto; } .gnav button kbd.gk { flex: 0 0 auto; } .gnav button:hover { background: var(--surface-2); color: var(--text); } .gnav button[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-ink); } .gnav .n { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--muted); }
 .rail .foot { margin-top: auto; font-size: 11px; color: var(--muted); }
 /* ---- the original dashboard's sidebar components, ported as-is ---- */
 .oside { display: grid; gap: 10px; min-width: 0; font-size: 12px; line-height: 1.4; }
@@ -145,8 +145,8 @@ main { padding: 14px 20px 60px; }
     if (!groups.some(g => g.id === S.group)) S.group = groups[0].id;
     document.getElementById('r-tiers').innerHTML = H.tierTabs(S.tier);
     document.getElementById('r-cur').innerHTML = `${esc(E.tierLabel(S.tier))}<b>${money(k.total)}</b>`;
-    document.getElementById('r-nav').innerHTML = groups.map(g => `<button type="button" data-act="group" data-val="${g.id}" aria-selected="${S.group === g.id}"><span>${g.icon}</span>${esc(g.label)}<span class="n">${secCount(g) || ''}</span></button>`).join('');
-    document.getElementById('gtabs').innerHTML = groups.map(g => `<button type="button" data-act="group" data-val="${g.id}" aria-selected="${S.group === g.id}">${g.icon} ${esc(g.label)}</button>`).join('');
+    document.getElementById('r-nav').innerHTML = groups.map(g => `<button type="button" data-act="group" data-val="${g.id}" aria-selected="${S.group === g.id}" title="${esc(g.label)} (press ${E.GROUP_KEY[g.id] || ''})"><span>${g.icon}</span>${esc(g.label)}<span class="n">${secCount(g) || ''}</span>${E.keyBadge(g.id)}</button>`).join('');
+    document.getElementById('gtabs').innerHTML = groups.map(g => `<button type="button" data-act="group" data-val="${g.id}" aria-selected="${S.group === g.id}">${g.icon} ${esc(g.label)} ${E.keyBadge(g.id)}</button>`).join('');
     document.getElementById('bnav').innerHTML = H.bottomNav(SCREENS, S.group, (groups.find(x => x.id === S.group) || { secs: [] }).secs.map(s => ({ id: s, label: E.secLabel(s) })));
     document.getElementById('r-side').innerHTML = H.origSide({ skip: ['fx'] });
     document.getElementById('t-tier').textContent = E.tierLabel(S.tier);
