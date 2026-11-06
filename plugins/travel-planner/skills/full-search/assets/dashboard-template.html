@@ -194,6 +194,7 @@ details.more { margin-top: 6px; font-size: 12.5px; } details.more summary { curs
 .bn-subs { display: flex; gap: 4px; flex: 1 1 auto; min-width: 0; overflow-x: auto; padding: 2px 0 2px 10px; border-left: 1px solid var(--border-strong); scrollbar-width: none; } .bn-subs::-webkit-scrollbar { display: none; }
 .bn-subs .sub { flex: 0 0 auto; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; white-space: nowrap; } .bn-subs .sub:hover { border-color: var(--accent); color: var(--text); }
 .bn-subs .sub.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.bn-subs .sub kbd { display: inline-block; font-family: var(--mono); font-size: 10px; line-height: 14px; min-width: 14px; text-align: center; border-radius: 4px; padding: 0 3px; margin-right: 6px; background: color-mix(in srgb, currentColor 14%, transparent); color: inherit; border: 1px solid color-mix(in srgb, currentColor 35%, transparent); }
 @media (max-width: 760px) { .bnav .in { flex-direction: column; align-items: stretch; gap: 4px; } .bn-groups { justify-content: space-between; } .bn-groups button { padding: 5px 6px; font-size: 11px; } .bn-subs { border-left: 0; padding-left: 0; } }
 body { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
 
@@ -937,7 +938,7 @@ window.TripEngine = function (DATA, opts) {
   // ---- bottom navigation (a router shared by every template) ----
   function bottomNavHTML(screens, current, subs) {
     const groupsHTML = screens.map(s => `<button type="button" data-act="group" data-val="${esc(s.id)}" aria-selected="${current === s.id}" title="${esc(s.label)}"><span class="ic" aria-hidden="true">${s.icon}</span><span class="lb">${esc(s.label)}</span></button>`).join('');
-    const subsHTML = (subs || []).length ? `<div class="bn-subs" aria-label="Sections in this tab">${subs.map(s => `<button type="button" class="sub" data-act="top" data-sec="${esc(s.id)}" data-sub="${esc(s.id)}">${esc(s.label)}</button>`).join('')}</div>` : '';
+    const subsHTML = (subs || []).length ? `<div class="bn-subs" aria-label="Sections in this tab">${subs.map((s, i) => `<button type="button" class="sub" data-act="top" data-sec="${esc(s.id)}" data-sub="${esc(s.id)}" title="Press ${i + 1} to jump here">${i < 9 ? `<kbd>${i + 1}</kbd>` : ''}${esc(s.label)}</button>`).join('')}</div>` : '';
     return `<nav class="bnav" aria-label="Sections"><div class="in"><div class="bn-groups">${groupsHTML}</div>${subsHTML}</div></nav>`;
   }
   const SHORT_LABEL = { fl: 'Flights', st: 'Accommodation', go: 'Transportation', ac: 'To do', fd: 'Food', es: 'Essentials', wx: 'Weather', src: 'Sources' };
@@ -1043,15 +1044,27 @@ window.TripEngine = function (DATA, opts) {
   }
   E.bind(document.body, paint);
   paint('init');
-  // keyboard shortcuts (ignored while typing in a field): F flights · A/L/S accommodation · T transportation · ⇧T things to do · ⇧F food · E essentials · W weather · ⇧S sources
+  // keyboard shortcuts (ignored while typing in a field): F flights · A/L/S accommodation · T transportation · ⇧T things to do · ⇧F food · E essentials · W weather · ⇧S sources · 1–9 the Nth section of the open tab
   const KEYS = [['f', false, 'fl'], ['a', false, 'st'], ['l', false, 'st'], ['s', false, 'st'], ['t', false, 'go'], ['t', true, 'ac'], ['f', true, 'fd'], ['e', false, 'es'], ['w', false, 'wx'], ['s', true, 'src']];
   document.addEventListener('keydown', e => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const t = e.target, tag = (t.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'select' || tag === 'textarea' || t.isContentEditable) return;
+    // 1–9: jump to the Nth section of the open tab (the numbered chips in the bottom bar); a collapsed card is expanded first
+    if (!e.shiftKey && /^[1-9]$/.test(e.key)) {
+      const g = groups.find(x => x.id === S.group), sec = g && g.secs[+e.key - 1]; if (!sec) return;
+      e.preventDefault(); gotoSec(sec); return;
+    }
     const k = KEYS.find(x => x[0] === e.key.toLowerCase() && x[1] === e.shiftKey); if (!k || !groups.some(g => g.id === k[2])) return;
     e.preventDefault(); S.group = k[2]; E.store.save(); paint('group');
   });
-  document.getElementById('r-keys').innerHTML = [['F', 'Flights'], ['A / L / S', 'Accommodation'], ['T', 'Transportation'], ['⇧T', 'Things to do'], ['⇧F', 'Food'], ['E', 'Essentials'], ['W', 'Weather'], ['⇧S', 'Sources']].map(([k, l]) => `<span><kbd>${k}</kbd>${l}</span>`).join(' · ');
+  function gotoSec(sec) {
+    if ((S.collapsed || {})[sec]) { S.collapsed[sec] = false; E.store.save(); paint('collapse'); }
+    const el = document.getElementById('sec-' + sec); if (!el) return;
+    const off = parseInt(getComputedStyle(el).scrollMarginTop) || 0;
+    scrollTo({ top: el.getBoundingClientRect().top + scrollY - off, behavior: 'auto' });
+    el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1500);
+  }
+  document.getElementById('r-keys').innerHTML = [['F', 'Flights'], ['A / L / S', 'Accommodation'], ['T', 'Transportation'], ['⇧T', 'Things to do'], ['⇧F', 'Food'], ['E', 'Essentials'], ['W', 'Weather'], ['⇧S', 'Sources'], ['1–9', 'Sections of the open tab']].map(([k, l]) => `<span><kbd>${k}</kbd>${l}</span>`).join(' · ');
   // partial builds (build_dashboard.py --partial / --map-pending): say what is still being researched and reload every minute
   (function pending() {
     const pend = E.trip.pending || []; if (!pend.length) return;

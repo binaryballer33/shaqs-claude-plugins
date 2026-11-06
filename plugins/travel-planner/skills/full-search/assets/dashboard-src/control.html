@@ -172,15 +172,27 @@ main { padding: 14px 20px 60px; }
   }
   E.bind(document.body, paint);
   paint('init');
-  // keyboard shortcuts (ignored while typing in a field): F flights · A/L/S accommodation · T transportation · ⇧T things to do · ⇧F food · E essentials · W weather · ⇧S sources
+  // keyboard shortcuts (ignored while typing in a field): F flights · A/L/S accommodation · T transportation · ⇧T things to do · ⇧F food · E essentials · W weather · ⇧S sources · 1–9 the Nth section of the open tab
   const KEYS = [['f', false, 'fl'], ['a', false, 'st'], ['l', false, 'st'], ['s', false, 'st'], ['t', false, 'go'], ['t', true, 'ac'], ['f', true, 'fd'], ['e', false, 'es'], ['w', false, 'wx'], ['s', true, 'src']];
   document.addEventListener('keydown', e => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const t = e.target, tag = (t.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'select' || tag === 'textarea' || t.isContentEditable) return;
+    // 1–9: jump to the Nth section of the open tab (the numbered chips in the bottom bar); a collapsed card is expanded first
+    if (!e.shiftKey && /^[1-9]$/.test(e.key)) {
+      const g = groups.find(x => x.id === S.group), sec = g && g.secs[+e.key - 1]; if (!sec) return;
+      e.preventDefault(); gotoSec(sec); return;
+    }
     const k = KEYS.find(x => x[0] === e.key.toLowerCase() && x[1] === e.shiftKey); if (!k || !groups.some(g => g.id === k[2])) return;
     e.preventDefault(); S.group = k[2]; E.store.save(); paint('group');
   });
-  document.getElementById('r-keys').innerHTML = [['F', 'Flights'], ['A / L / S', 'Accommodation'], ['T', 'Transportation'], ['⇧T', 'Things to do'], ['⇧F', 'Food'], ['E', 'Essentials'], ['W', 'Weather'], ['⇧S', 'Sources']].map(([k, l]) => `<span><kbd>${k}</kbd>${l}</span>`).join(' · ');
+  function gotoSec(sec) {
+    if ((S.collapsed || {})[sec]) { S.collapsed[sec] = false; E.store.save(); paint('collapse'); }
+    const el = document.getElementById('sec-' + sec); if (!el) return;
+    const off = parseInt(getComputedStyle(el).scrollMarginTop) || 0;
+    scrollTo({ top: el.getBoundingClientRect().top + scrollY - off, behavior: 'auto' });
+    el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1500);
+  }
+  document.getElementById('r-keys').innerHTML = [['F', 'Flights'], ['A / L / S', 'Accommodation'], ['T', 'Transportation'], ['⇧T', 'Things to do'], ['⇧F', 'Food'], ['E', 'Essentials'], ['W', 'Weather'], ['⇧S', 'Sources'], ['1–9', 'Sections of the open tab']].map(([k, l]) => `<span><kbd>${k}</kbd>${l}</span>`).join(' · ');
   // partial builds (build_dashboard.py --partial / --map-pending): say what is still being researched and reload every minute
   (function pending() {
     const pend = E.trip.pending || []; if (!pend.length) return;
