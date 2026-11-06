@@ -827,25 +827,36 @@ parameters, tier table, verified vs estimate, vendors, key notes), and the **att
 trip on any computer: the self-contained dashboard `.html`, the trip `.json`, and a how-to-open note. Write
 `closing-summary.md` first; the script turns it into the plain-text and HTML bodies.
 
-Then send it, using the first of these that works (check what is connected; do not ask the user to set one up
-mid-run):
+**Host the dashboard first (user's instruction, Nov 6 2026)** so the email carries a link that opens in a browser with
+no download: Gmail shows an attached `.html` as source, never rendered. Make a hostable copy with every photo embedded
+(the Artifact host blocks images from other sites) and publish it:
 
-1. A Gmail / Google Workspace connector or the `google-workspace` skill: send (or at least draft) to the address.
-2. Resend, if its MCP server is authorized.
-3. Gmail in the user's Chrome (Claude in Chrome): compose to the address, paste the subject and summary, attach
-   the files with `file_upload`, and press Send only because this standing instruction authorizes mail to the
-   user's own address. Never send to anyone else without asking.
-   How: open https://mail.google.com/mail/u/0/#inbox?compose=new, type the address in To and the
-   subject in Subject, then load the styled body without pasting it as text: write the `<body>` contents of the
-   `--preview` file to a fragment file, add a hidden `<input type=file>` to the page with `javascript_tool`, `file_upload`
-   the fragment into it, read it with `files[0].text()` and insert it into `div[aria-label="Message Body"]` with
-   `document.execCommand('insertHTML', false, trustedTypes.createPolicy('tpMail' + Date.now(), {createHTML: s => s}).createHTML(html))`
-   (Gmail enforces Trusted Types; plain insertHTML is refused). Remove the helper input, `file_upload` the dashboard and
-   trip JSON into Gmail's own "Attach files" input, check To / subject / attachments, then Send and confirm "Message sent".
-   Check the To field on screen (a screenshot of the compose header) before Send: the typed address can fail
-   to register when the compose window has not taken focus. Click the Recipients line, type the address,
-   press Enter, and confirm the recipient chip appears. After sending, open the copy in Sent to confirm the
-   recipient, the styled body and both attachments.
+```bash
+python3 ${CLAUDE_SKILL_DIR}/scripts/make_hosted.py <trip>-dashboard.html <trip>-hosted.html   # needs Pillow: pip install pillow
+```
+
+then publish `<trip>-hosted.html` with the `Artifact` tool (icon "map", a one-sentence description). The link is private to
+the user's Claude account until they allow link access from the page's Share button: say so in the email and the closing
+message. Put the link first in the email body. Rebuild and republish the same file path when the dashboard changes.
+
+Then send it. **The Gmail connector is the go-to; Chrome is the fallback (user's instruction, Nov 6 2026).**
+
+1. **The Gmail connector** (the `send_message` tool of the Gmail MCP server; load it with `ToolSearch` if it is deferred):
+   `to` = the address, your subject, `htmlBody` = the styled summary from `email_results.py --preview` (inline styles) with the
+   hosted link at the top, `body` = the plain-text summary, `includeSignature: true`. Attachments go in `attachments` as
+   base64 only when the file is small (under about 300 KB); the dashboard and trip JSON are far bigger than fits in one tool
+   call, so for those send the message with the hosted link and, when the user wants the files too, attach them with step 2.
+   Confirm the returned message `id` before saying it was sent.
+2. **Gmail in the user's Chrome (Claude in Chrome)**, only when the connector is not connected, its send fails, or a large
+   attachment is needed: compose to the address, paste the subject and summary, attach the files with `file_upload`, and
+   press Send only because this standing instruction authorizes mail to the user's own address. Never send to anyone else
+   without asking.
+   How: open https://mail.google.com/mail/u/0/?view=cm&fs=1&to=<address>&su=<subject>, then load the styled body without
+   pasting it as text: build the HTML string in `javascript_tool`, put it in a `DataTransfer` as `text/html` and dispatch a
+   `paste` ClipboardEvent on `div[aria-label="Message Body"]` (Gmail enforces Trusted Types, so `insertHTML` is refused; the
+   paste event is accepted). `file_upload` the dashboard and trip JSON into Gmail's hidden `input[type=file]`, wait for the
+   chips to finish uploading, check To / subject / attachments, then Send, open Sent and confirm the message is there.
+3. Resend, if its MCP server is authorized and neither of the above is available.
 4. None available: run the script with `--open` so the `.eml` opens in the default mail app, and tell the user
    plainly that it was prepared but not sent, with the path.
 
@@ -913,6 +924,7 @@ folder, `trip.json` and dashboard file name, re-read today's prices, and rebuild
 - `scripts/fetch_weather.py` — embeds the forecast (inside 16 days) and monthly normals for the trip dates, with verify links.
 - `scripts/assign_tiers.py` — tiers untiered items by price rank within their category (quality floors applied).
 - `scripts/build_dashboard.py` — validate trip JSON and build the dashboard HTML.
+- `scripts/make_hosted.py` — a hostable copy of a built dashboard (photos embedded, document wrapper dropped) for the Artifact host (Step 6).
 - `scripts/fetch_activity_images.py` — a thumbnail for every tour line from its page's og:image (cached per trip; blocked sites are read in Chrome).
 - `assets/dashboard-template.html` — the dashboard (generated: do not edit by hand); `assets/sample-trip.json` — a complete example input.
 - `assets/dashboard-src/` — the template's sources (`control.html` shell, `engine.js`, `base.css`) and `assemble.py`, which regenerates `dashboard-template.html`.
