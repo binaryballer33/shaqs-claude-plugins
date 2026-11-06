@@ -39,11 +39,17 @@ You are producing two things for the user:
    options found on the booking sites, each with the price you saw, the date you saw it, and a link
    that opens *that specific flight / listing / car* with the user's dates and guests pre-filled.
 2. **A trip-cost dashboard** (one self-contained HTML file) built from `assets/dashboard-template.html`
-   by `scripts/build_dashboard.py`. Tier tabs (Budget, Mid-tier, Upper class, Luxury) plus a
-   **Custom** tab that mixes any tier; a summary row (selected total, where the money goes, tier
-   comparison) above two-column category cards; vendor tabs inside each category with up to five
-   options each; a checkbox on every line; and nearby-places cards for each stay (or any address or Google Maps
-   link the user pastes) with everything useful within a 5-mile radius. There is no map.
+   by `scripts/build_dashboard.py`. The template is the **Mission Control** design (user's instruction, Nov 6 2026;
+   sources in `assets/dashboard-src/`, regenerate with `python assets/dashboard-src/assemble.py` after editing them):
+   a dark workspace with a light-theme toggle; a left rail with a collapsible Price tier panel (Budget, Mid-tier,
+   Upper class, Luxury, **Custom**), the Workspace tabs (Flights · Stays · Getting around · Things to do · Food ·
+   Essentials · Weather · Sources) and the essentials cards (entry must-haves, your selection, weather & rainy season,
+   your dates, custom trip, airport → stay, SIM, onward travel); a header with the selected total, a Ledger drawer,
+   check-in / check-out dates and a currency strip; a bottom navigation router whose chips are the current tab's
+   cards; collapsible cards with filter chips (area, tier, type, time of day, airport, bags, site, sort) and a
+   checkbox on every line; "Top of section" / "Next section" links on every sub-card; photo cards for
+   neighborhoods, day trips and tours; and nearby-places cards for each stay (or any address or Google Maps link
+   the user pastes) with everything useful within a 5-mile radius. There is no map.
 
 The dashboard is only as good as the research behind it. Most of your time goes into step 2.
 
@@ -367,6 +373,12 @@ Non-negotiables, because they are the whole point of the deliverable:
   read in Chrome, a link proving the dish is on the menu: Michelin Guide page, the menu, a local
   food guide). Leave out places under about 4.0. It renders as the "Local food to try" card with
   dish filters; it is not part of the totals.
+  **Every tour gets a photo.** After the activities are merged, run `scripts/fetch_activity_images.py trip.json`: it
+  stores each tour page's og:image in `activities/activity_images.json` and on the line as `image`. Most sites refuse
+  plain fetches (GetYourGuide, Klook, Trip.com, Expedia): for every URL it reports MISS, open the page in Chrome, read
+  `document.querySelector('meta[property="og:image"]').content` (for us.trip.com detail pages take the first large
+  product photo instead; "things-to-do/list" search links have no image), add it to the cache and rerun with
+  `--apply-only`. Rerun `--apply-only` after any merge that rewrites the activity lines.
   **Every dish gets a photo.** Give each dish `wiki` (its English Wikipedia article, e.g. "Peking
   duck") and run `scripts/fetch_dish_images.py trip.json`: it takes the article's lead photo from
   Wikimedia Commons (free licence, credited on the page, stable URL) and adds a Google Images search
@@ -746,19 +758,17 @@ back to a private hotel room and says so; tell the user which rule it used.
 
 ## Step 5 — Verify, then deliver
 
-Open the built file and check it before handing it over: the four tier tabs switch, unchecking a line
-changes the total, every link opens the right provider page, the Master Search List (a collapsed
-panel above the category cards) lists a results link for every vendor × category you searched, every
-the page uses 95% of the screen width with the essentials sidebar on the right (above the content and
-swipeable on phones), Flights, Lodging and Local food to try each take a full-width row (every card 500px tall), chip rows (tier, site, dish, nearby places) stay on one
-line and scroll sideways with a "+N ›" button, weather tiles carry an icon (sun, cloud, light/heavy
-rain, storm, snow, fog), each lists every option from
-every site and tier (cheapest first, with the sort menu working; the Morning / Afternoon / Night flight tabs list flights by departure time, and each stop sits on the route line with its airport code, city and layover length) with its rating and review count and
-scrolls inside, the Airport transfer, SIM & mobile data and Local food to try cards are filled, the
-red entry banner shows what US citizens need, the weather card shows the forecast or
-the monthly normal, and the "What's near your stay" section (no map) shows the airport-to-stay card, then one full-width
-card each for the stay's hospitals, pharmacies and groceries (rated, with hours, distance, walking and driving time, phone) and
-the other tabs, with directions / ride links from the airport. Use the built-in browser (serve the folder with `python3 -m http.server` through
+Open the built file and check it before handing it over: the five tier buttons in the rail switch the totals,
+unchecking a line changes the total, every link opens the right provider page, the Sources tab's Master Search List
+lists a results link for every vendor × category you searched and its Sites-searched table shows the run, each
+Workspace tab shows its cards and the bottom navigation lists those cards as chips, every card collapses and expands,
+the Flights card has Tier / Airport / Departs / Bags / Site chips and the sort menu works (Morning / Afternoon / Night
+list flights by departure time; each stop sits on the route line with its airport code and layover length), stays show
+their rating, A/C, Wi-Fi and airport distance, the neighborhood and day-trip cards show their photos and the tours their
+thumbnails, the Ledger drawer opens with the selected lines and prices, the rail's entry card shows what US citizens
+need, the weather tab shows the forecast or the monthly normal, and the "What's near your stay" card shows the
+airport-to-stay column, then the stay's hospitals, pharmacies and groceries (rated, with distance and walking time) and
+the other place types. Use the built-in browser (serve the folder with `python3 -m http.server` through
 `preview_start`; the pane cannot open `file://` paths) or publish it with the `Artifact` tool when
 that tool exists (load the `artifact-design` skill first, as that tool requires). Send the file with
 `SendUserFile` when available so it reaches the user's other devices.
@@ -769,7 +779,7 @@ Your closing message to the user should contain, in this order:
 2. A four-row table: tier → default total → what is included, per person.
 3. The count of verified vs. estimated lines and which ones are estimates, so they know what to
    re-check before booking.
-4. Where the file is, and one line on how to use it (tabs, checkboxes, Master Search List, map).
+4. Where the file is, and one line on how to use it (tier buttons, Workspace tabs, checkboxes, Ledger, Sources tab).
 5. One line on vendors: all ten searched, or which ones were blocked / had no inventory, and what
    you used instead.
 
@@ -903,5 +913,7 @@ folder, `trip.json` and dashboard file name, re-read today's prices, and rebuild
 - `scripts/fetch_weather.py` — embeds the forecast (inside 16 days) and monthly normals for the trip dates, with verify links.
 - `scripts/assign_tiers.py` — tiers untiered items by price rank within their category (quality floors applied).
 - `scripts/build_dashboard.py` — validate trip JSON and build the dashboard HTML.
-- `assets/dashboard-template.html` — the dashboard; `assets/sample-trip.json` — a complete example input.
+- `scripts/fetch_activity_images.py` — a thumbnail for every tour line from its page's og:image (cached per trip; blocked sites are read in Chrome).
+- `assets/dashboard-template.html` — the dashboard (generated: do not edit by hand); `assets/sample-trip.json` — a complete example input.
+- `assets/dashboard-src/` — the template's sources (`control.html` shell, `engine.js`, `base.css`) and `assemble.py`, which regenerates `dashboard-template.html`.
 - `assets/trip-request-form.html` — typeahead form (cities/airports dropdown, dates, travelers) that writes the prompt.
