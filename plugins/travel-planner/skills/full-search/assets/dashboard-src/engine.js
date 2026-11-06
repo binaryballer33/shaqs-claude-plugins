@@ -437,7 +437,10 @@ window.TripEngine = function (DATA, opts) {
   function nearbyHTML() {
     if (!has.nearby()) return '';
     const st = selectedStay(), list = stays(), ap = trip.arrival_airport;
-    const sel = `<label class="staysel"><span>Around</span><select data-act="stay">${list.map(it => `<option value="${esc(it.id)}"${st && it.id === st.id ? ' selected' : ''}>${esc(it.name)}${isOn(state.tier, it) ? ' ✓' : ''}</option>`).join('')}</select></label>`;
+    const optLabel = it => `${it.name}${it.neighborhood && NB.length ? ' (' + nbName(it.neighborhood) + ')' : ''}${isOn(state.tier, it) ? ' ✓' : ''}`;
+    const byArea = NB.map(n => ({ n, its: list.filter(it => it.neighborhood === n.id) })).filter(g => g.its.length), rest = list.filter(it => !NB.some(n => n.id === it.neighborhood));
+    const opt = it => `<option value="${esc(it.id)}"${st && it.id === st.id ? ' selected' : ''}>${esc(optLabel(it))}</option>`;
+    const sel = `<label class="staysel"><span>Around</span><select data-act="stay">${byArea.length ? byArea.map(g => `<optgroup label="${esc(g.n.name)}">${g.its.map(opt).join('')}</optgroup>`).join('') + (rest.length ? `<optgroup label="Elsewhere">${rest.map(opt).join('')}</optgroup>` : '') : list.map(opt).join('')}</select></label>`;
     const cats = Object.keys(POI_CATS);
     const chips = `<div class="frow">${cats.map(c => chip(POI_CATS[c].icon + ' ' + POI_CATS[c].label, null, state.poiCats.includes(c), { act: 'poicat', val: c })).join('')}</div>`;
     let body = '';
